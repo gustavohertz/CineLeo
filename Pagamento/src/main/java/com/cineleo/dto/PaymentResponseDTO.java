@@ -1,3 +1,3 @@
-package com.infnet.microservicesKafka.Services.paymentService.dto;
+package com.cineleo.dto;
 
 public record PaymentResponseDTO(String status, String paymentId) {}

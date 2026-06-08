@@ -1,4 +1,4 @@
-package com.infnet.microservicesKafka.Services.paymentService.exception;
+package com.cineleo.exception;
 
 public class PaymentProcessingException extends RuntimeException {
     public PaymentProcessingException(String message) {

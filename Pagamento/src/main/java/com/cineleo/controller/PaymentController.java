@@ -1,9 +1,9 @@
-package com.infnet.microservicesKafka.Services.paymentService.controller;
+package com.cineleo.controller;
 
-import com.infnet.microservicesKafka.Services.paymentService.dto.PaymentCardRequestDTO;
-import com.infnet.microservicesKafka.Services.paymentService.dto.PaymentResponseDTO;
-import com.infnet.microservicesKafka.Services.paymentService.dto.PaymentStatusResponseDTO;
-import com.infnet.microservicesKafka.Services.paymentService.service.PaymentService;
+import com.cineleo.dto.PaymentCardRequestDTO;
+import com.cineleo.dto.PaymentResponseDTO;
+import com.cineleo.dto.PaymentStatusResponseDTO;
+import com.cineleo.service.PaymentService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

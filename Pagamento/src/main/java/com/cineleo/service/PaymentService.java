@@ -1,9 +1,9 @@
-package com.infnet.microservicesKafka.Services.paymentService.service;
+package com.cineleo.service;
 
-import com.infnet.microservicesKafka.Services.paymentService.dto.PaymentCardRequestDTO;
-import com.infnet.microservicesKafka.Services.paymentService.dto.PaymentResponseDTO;
-import com.infnet.microservicesKafka.Services.paymentService.exception.PaymentProcessingException;
-import com.infnet.microservicesKafka.Services.paymentService.repository.AsaasConnection;
+import com.cineleo.dto.PaymentCardRequestDTO;
+import com.cineleo.dto.PaymentResponseDTO;
+import com.cineleo.exception.PaymentProcessingException;
+import com.cineleo.repository.AsaasConnection;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;

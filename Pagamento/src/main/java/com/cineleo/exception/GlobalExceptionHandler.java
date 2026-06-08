@@ -1,4 +1,4 @@
-package com.infnet.microservicesKafka.Services.paymentService.exception;
+package com.cineleo.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

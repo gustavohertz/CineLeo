@@ -1,4 +1,5 @@
-package com.infnet.microservicesKafka.Services.paymentService.repository;
+package com.cineleo.repository;
+
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;

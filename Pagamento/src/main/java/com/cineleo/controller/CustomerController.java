@@ -1,11 +1,14 @@
-package com.infnet.microservicesKafka.Services.paymentService.controller;
+package com.cineleo.controller;
 
-import com.infnet.microservicesKafka.Services.paymentService.dto.CustomerRequestDTO;
-import com.infnet.microservicesKafka.Services.paymentService.dto.CustomerResponseDTO;
-import com.infnet.microservicesKafka.Services.paymentService.service.CustomerService;
+import com.cineleo.dto.CustomerRequestDTO;
+import com.cineleo.dto.CustomerResponseDTO;
+import com.cineleo.service.CustomerService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/customers")

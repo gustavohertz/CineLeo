@@ -1,4 +1,4 @@
-package com.infnet.microservicesKafka.Services.paymentService.dto;
+package com.cineleo.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
