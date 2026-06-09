@@ -1,5 +1,6 @@
 package com.cineleo.eventos.controller;
 
+import com.cineleo.eventos.dto.PagamentoReservaRequestDTO;
 import com.cineleo.eventos.dto.ReservaRequestDTO;
 import com.cineleo.eventos.dto.ReservaResponseDTO;
 import com.cineleo.eventos.service.ReservaService;
@@ -43,9 +44,10 @@ public class ReservaController {
         return ResponseEntity.status(HttpStatus.CREATED).body(reservaService.criar(dto));
     }
 
-    @PatchMapping("/{id}/confirmar")
-    public ResponseEntity<ReservaResponseDTO> confirmar(@PathVariable Long id) {
-        return ResponseEntity.ok(reservaService.confirmar(id));
+    @PostMapping("/{id}/pagar")
+    public ResponseEntity<ReservaResponseDTO> pagar(@PathVariable Long id,
+                                                     @RequestBody @Valid PagamentoReservaRequestDTO dto) {
+        return ResponseEntity.ok(reservaService.pagar(id, dto));
     }
 
     @PatchMapping("/{id}/cancelar")

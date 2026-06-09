@@ -13,6 +13,7 @@ public class ReservaResponseDTO {
 
     private Long id;
     private Long sessaoId;
+    private Long usuarioId;
     private String filmeNome;
     private LocalDateTime dataHoraSessao;
     private String salaNome;
@@ -29,6 +30,7 @@ public class ReservaResponseDTO {
         return ReservaResponseDTO.builder()
                 .id(reserva.getId())
                 .sessaoId(reserva.getSessao().getId())
+                .usuarioId(reserva.getUsuarioId())
                 .filmeNome(reserva.getSessao().getFilme().getNome())
                 .dataHoraSessao(reserva.getSessao().getDataHoraInicio())
                 .salaNome(reserva.getSessao().getSala().getNome())

@@ -1,5 +1,8 @@
 package com.cineleo.eventos.service;
 
+import com.cineleo.eventos.client.PagamentoClient;
+import com.cineleo.eventos.client.UsuarioClient;
+import com.cineleo.eventos.dto.PagamentoReservaRequestDTO;
 import com.cineleo.eventos.dto.ReservaRequestDTO;
 import com.cineleo.eventos.dto.ReservaResponseDTO;
 import com.cineleo.eventos.entity.Reserva;
@@ -22,6 +25,8 @@ public class ReservaService {
 
     private final ReservaRepository reservaRepository;
     private final SessaoRepository sessaoRepository;
+    private final UsuarioClient usuarioClient;
+    private final PagamentoClient pagamentoClient;
 
     @Transactional(readOnly = true)
     public List<ReservaResponseDTO> listarPorSessao(Long sessaoId) {
@@ -53,13 +58,18 @@ public class ReservaService {
 
     @Transactional
     public ReservaResponseDTO criar(ReservaRequestDTO dto) {
+        // Valida usuário no serviço de Usuários
+        UsuarioClient.UsuarioDTO usuario = usuarioClient.buscarPorId(dto.getUsuarioId());
+        if ("INATIVO".equals(usuario.getStatus())) {
+            throw new BusinessException("Usuário inativo não pode realizar reservas");
+        }
+
         Sessao sessao = sessaoRepository.findById(dto.getSessaoId())
                 .orElseThrow(() -> new ResourceNotFoundException("Sessão não encontrada com id: " + dto.getSessaoId()));
 
         if (sessao.getStatus() != Sessao.StatusSessao.AGENDADA) {
             throw new BusinessException("Reservas só podem ser feitas para sessões com status AGENDADA");
         }
-
         if (sessao.getAssentosDisponiveis() < dto.getQuantidadeIngressos()) {
             throw new BusinessException("Assentos insuficientes. Disponíveis: " + sessao.getAssentosDisponiveis());
         }
@@ -71,9 +81,10 @@ public class ReservaService {
 
         Reserva reserva = Reserva.builder()
                 .sessao(sessao)
-                .nomeCliente(dto.getNomeCliente())
-                .emailCliente(dto.getEmailCliente())
-                .cpfCliente(dto.getCpfCliente())
+                .usuarioId(dto.getUsuarioId())
+                .nomeCliente(usuario.getNome())
+                .emailCliente(usuario.getEmail())
+                .cpfCliente(usuario.getCpf())
                 .quantidadeIngressos(dto.getQuantidadeIngressos())
                 .valorTotal(valorTotal)
                 .codigoConfirmacao(gerarCodigoConfirmacao())
@@ -83,15 +94,55 @@ public class ReservaService {
     }
 
     @Transactional
-    public ReservaResponseDTO confirmar(Long id) {
-        Reserva reserva = reservaRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada com id: " + id));
+    public ReservaResponseDTO pagar(Long reservaId, PagamentoReservaRequestDTO dto) {
+        Reserva reserva = reservaRepository.findById(reservaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva não encontrada com id: " + reservaId));
 
         if (reserva.getStatus() != Reserva.StatusReserva.PENDENTE) {
-            throw new BusinessException("Somente reservas com status PENDENTE podem ser confirmadas");
+            throw new BusinessException("Somente reservas PENDENTES podem ser pagas");
         }
 
-        reserva.setStatus(Reserva.StatusReserva.CONFIRMADA);
+        // Registra o cliente no gateway de pagamento
+        String customerId = pagamentoClient.criarCustomer(
+                reserva.getNomeCliente(),
+                reserva.getEmailCliente(),
+                reserva.getCpfCliente()
+        );
+
+        // Monta dados do cartão
+        PagamentoClient.CartaoDTO cartao = new PagamentoClient.CartaoDTO();
+        cartao.setNumero(dto.getCartao().getNumero());
+        cartao.setNomeTitular(dto.getCartao().getNomeTitular());
+        cartao.setMesExpiracao(dto.getCartao().getMesExpiracao());
+        cartao.setAnoExpiracao(dto.getCartao().getAnoExpiracao());
+        cartao.setCvv(dto.getCartao().getCvv());
+
+        String descricao = "Ingresso: " + reserva.getSessao().getFilme().getNome()
+                + " - " + reserva.getQuantidadeIngressos() + "x";
+
+        // Processa o pagamento
+        String pagamentoId = pagamentoClient.processarPagamento(
+                customerId,
+                reserva.getValorTotal().doubleValue(),
+                descricao,
+                cartao
+        );
+
+        // Verifica se foi aprovado
+        boolean aprovado = pagamentoClient.verificarPagamento(pagamentoId);
+
+        reserva.setIdPagamentoExterno(pagamentoId);
+
+        if (aprovado) {
+            reserva.setStatus(Reserva.StatusReserva.CONFIRMADA);
+        } else {
+            reserva.setStatus(Reserva.StatusReserva.PAGAMENTO_RECUSADO);
+            // Devolve assentos
+            Sessao sessao = reserva.getSessao();
+            sessao.setAssentosDisponiveis(sessao.getAssentosDisponiveis() + reserva.getQuantidadeIngressos());
+            sessaoRepository.save(sessao);
+        }
+
         return ReservaResponseDTO.from(reservaRepository.save(reserva));
     }
 
@@ -102,6 +153,9 @@ public class ReservaService {
 
         if (reserva.getStatus() == Reserva.StatusReserva.CANCELADA) {
             throw new BusinessException("Reserva já está cancelada");
+        }
+        if (reserva.getStatus() == Reserva.StatusReserva.CONFIRMADA) {
+            throw new BusinessException("Reservas confirmadas não podem ser canceladas diretamente. Entre em contato com o suporte.");
         }
 
         Sessao sessao = reserva.getSessao();

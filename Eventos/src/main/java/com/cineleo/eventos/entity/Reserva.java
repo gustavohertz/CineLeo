@@ -25,6 +25,9 @@ public class Reserva {
     @JoinColumn(name = "sessao_id", nullable = false)
     private Sessao sessao;
 
+    @Column(nullable = false)
+    private Long usuarioId;
+
     @Column(nullable = false, length = 100)
     private String nomeCliente;
 
