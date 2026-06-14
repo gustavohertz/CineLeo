@@ -1,4 +1,4 @@
-# 💳 Payment API
+# 🔔 Payment API
 
 API de pagamentos desenvolvida em **Java 21**, **Spring Boot 3** e **Maven**, responsável pelo gerenciamento de clientes, processamento de pagamentos via cartão de crédito/débito e consulta de status das transações.
 
@@ -136,7 +136,7 @@ curl --request GET \
 
 ```json
 {
-  "approved": true
+  "sucess": "ok"
 }
 ```
 
