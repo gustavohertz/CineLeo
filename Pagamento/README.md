@@ -110,7 +110,39 @@ http://localhost:5000
 
 # 📌 Endpoints
 
-## 1. Criar Cliente
+## 1 - Health Check
+
+### Request
+
+```http
+GET / health-check
+```
+
+### Body
+
+```json
+  http://localhost:5000/health-check
+```
+
+### Exemplo cURL
+
+```bash
+curl --request GET \
+  --url http://localhost:5000/payments/pay_98t6intmudl2dinc/status \
+  --header 'User-Agent: insomnia/12.6.0'
+```
+
+### Response
+
+```json
+{
+  "approved": true
+}
+```
+
+---
+
+## 2. Criar Cliente
 
 ### Request
 
@@ -151,7 +183,7 @@ curl --request POST \
 
 ---
 
-## 2. Processar Pagamento
+## 3. Processar Pagamento
 
 ### Request
 
@@ -209,7 +241,7 @@ curl --request POST \
 
 ---
 
-## 3. Consultar Status do Pagamento
+## 4. Consultar Status do Pagamento
 
 ### Request
 
