@@ -1,0 +1,22 @@
+services:
+  usuarios-db:
+    image: postgres:16-alpine
+    container_name: cineleo-usuarios-db
+    environment:
+      POSTGRES_DB: usuarios_db
+      POSTGRES_USER: usuarios_user
+      POSTGRES_PASSWORD: usuarios_pass
+    ports:
+      - "5435:5432"
+    volumes:
+      - usuarios_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U usuarios_user -d usuarios_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  usuarios_data:
+    driver: local

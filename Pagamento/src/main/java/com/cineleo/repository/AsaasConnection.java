@@ -1,7 +1,6 @@
 package com.cineleo.repository;
 
-
-import org.springframework.beans.factory.annotation.Value;
+import com.cineleo.config.RestConfig.*;
 import org.springframework.http.*;
 import org.springframework.stereotype.Repository;
 import org.springframework.web.client.RestTemplate;
@@ -15,12 +14,10 @@ public class AsaasConnection {
     private final String apiUrl;
     private final String apiKey;
 
-    public AsaasConnection(RestTemplate restTemplate,
-                           @Value("${asaas.api.url}") String apiUrl,
-                           @Value("${asaas.api.key}") String apiKey) {
+    public AsaasConnection(RestTemplate restTemplate, AsaasProperties properties) {
         this.restTemplate = restTemplate;
-        this.apiUrl = apiUrl;
-        this.apiKey = apiKey;
+        this.apiUrl = properties.getUrl();
+        this.apiKey = properties.getKey();
     }
 
     private HttpHeaders headers() {
