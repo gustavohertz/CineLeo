@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 
@@ -17,12 +18,9 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
-    // Persistência em memória para habilitar consulta por ID sem depender do Repository.
     private final Map<String, NotificationResponseDTO> memoryStore = new ConcurrentHashMap<>();
 
-    // Regra de negócio: enviar e-mail por ID apenas 1 vez.
     private final Set<String> emailSentIds = ConcurrentHashMap.newKeySet();
-
 
     public NotificationService(NotificationRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
@@ -32,23 +30,19 @@ public class NotificationService {
         if (request == null) {
             throw new NotificationProcessingException("Notification request is required");
         }
-        if (request.getId() == null || request.getId().isBlank()) {
-            throw new NotificationProcessingException("Notification id is required");
-        }
 
         OffsetDateTime dateTime = request.getDateTime() != null ? request.getDateTime() : OffsetDateTime.now();
+        String generatedId = UUID.randomUUID().toString();
 
         NotificationResponseDTO response = new NotificationResponseDTO();
-        response.setId(request.getId());
+        response.setId(generatedId);
         response.setUserID(request.getUserID());
         response.setUserEmail(request.getUserEmail());
         response.setMsgString(request.getMsgString());
         response.setDateTime(dateTime);
 
-        // Atualiza store em memória para consulta imediata
         memoryStore.put(response.getId(), response);
 
-        // Mantém chamada para o repository (não alterado). Se ainda não persistir de verdade, não quebra o fluxo.
         try {
             Map<String, Object> notificationData = Map.of(
                     "id", response.getId(),
@@ -59,18 +53,16 @@ public class NotificationService {
             );
             notificationRepository.save(notificationData);
         } catch (Exception e) {
-            // Não impedir a operação por causa do repository ainda stubado.
+            throw new NotificationProcessingException("Failed to save notification", e);
         }
 
         return response;
     }
 
-    // consume e ingestão
     public NotificationResponseDTO consumeNotification(NotificationRequestDTO request) {
         return createNotification(request);
     }
 
-    // Enviar e-mail por ID apenas 1 vez.
     public String sendEmailById(String id) {
         if (id == null || id.isBlank()) {
             throw new NotificationProcessingException("Notification id is required");
@@ -80,7 +72,6 @@ public class NotificationService {
             throw new NotificationProcessingException("E-mail already sent for notification id: " + id);
         }
 
-        // valida que a notificação existe (consulta por ID imprime os dados)
         NotificationResponseDTO notification = getNotificationById(id);
         if (notification == null) {
             throw new NotificationProcessingException("Notification not found for ID: " + id);
@@ -101,7 +92,6 @@ public class NotificationService {
             return found;
         }
 
-        // fallback para o repository (caso você futuramente implemente persistência real)
         try {
             Map<String, Object> notificationData = notificationRepository.findById(id);
             if (notificationData == null) {

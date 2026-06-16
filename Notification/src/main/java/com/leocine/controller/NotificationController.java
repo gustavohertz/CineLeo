@@ -26,11 +26,10 @@ public class NotificationController {
     @PostMapping("/consume")
     public ResponseEntity<ConsumeResponseDTO> consumeNotification(@RequestBody NotificationRequestDTO notificationRequest) {
         try {
-            notificationService.consumeNotification(notificationRequest);
-            return ResponseEntity.ok(new ConsumeResponseDTO(notificationRequest.getId(), "ok"));
+            NotificationResponseDTO response = notificationService.consumeNotification(notificationRequest);
+            return ResponseEntity.ok(new ConsumeResponseDTO(response.getId(), "ok"));
         } catch (Exception e) {
-            String id = notificationRequest != null ? notificationRequest.getId() : null;
-            return ResponseEntity.ok(new ConsumeResponseDTO(id, "error"));
+            return ResponseEntity.ok(new ConsumeResponseDTO(null, "error"));
         }
     }
 

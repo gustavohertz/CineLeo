@@ -4,19 +4,10 @@ import java.time.OffsetDateTime;
 
 public class NotificationRequestDTO {
 
-    private String id;
     private String userID;
     private String userEmail;
     private String msgString;
     private OffsetDateTime dateTime;
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
 
     public String getUserID() {
         return userID;

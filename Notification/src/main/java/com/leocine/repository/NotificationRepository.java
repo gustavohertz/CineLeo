@@ -36,7 +36,6 @@ public class NotificationRepository {
             message.setDateTime(OffsetDateTime.now());
         }
 
-        // upsert simples
         if (message.getId() != null && entityManager.find(NotificationMessage.class, message.getId()) != null) {
             entityManager.merge(message);
         } else {

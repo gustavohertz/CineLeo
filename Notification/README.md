@@ -115,7 +115,7 @@ Quando a porta do servidor estiver inválida (<= 0):
 ### 2) Consumir/ingestar notificação (HTTP)
 
 Este endpoint **recebe** um payload e:
-- valida `id` (obrigatório)
+- **NÃO aceita** `id` no request (a API gera um id no backend)
 - salva em `memoryStore`
 - tenta persistir via `NotificationRepository`
 - retorna status `ok` ou `error` sem stacktrace para o cliente
@@ -128,7 +128,6 @@ Content-Type: application/json
 
 #### Body (JSON)
 > Campos:
-- `id` (String, obrigatório)
 - `userID` (String)
 - `userEmail` (String)
 - `msgString` (String)
@@ -137,7 +136,6 @@ Content-Type: application/json
 Exemplo:
 ```json
 {
-  "id": "1",
   "userID": "10",
   "userEmail": "user@email.com",
   "msgString": "Mensagem",
@@ -148,7 +146,7 @@ Exemplo:
 **Response (200)**
 ```json
 {
-  "id": "1",
+  "id": "<gerado_pelo_backend>",
   "status": "ok"
 }
 ```
@@ -156,7 +154,7 @@ Exemplo:
 Em caso de erro:
 ```json
 {
-  "id": "1",
+  "id": null,
   "status": "error"
 }
 ```
@@ -215,7 +213,7 @@ curl -X GET http://localhost:8000/health-check
 ```bash
 curl -X POST http://localhost:8000/notification/consume ^
   -H "Content-Type: application/json" ^
-  -d "{\"id\":\"1\",\"userID\":\"10\",\"userEmail\":\"user@email.com\",\"msgString\":\"Mensagem\",\"dateTime\":\"2026-06-16T10:00:00Z\"}"
+  -d "{\"userID\":\"10\",\"userEmail\":\"user@email.com\",\"msgString\":\"Mensagem\",\"dateTime\":\"2026-06-16T10:00:00Z\"}"
 ```
 
 ### Buscar por ID
@@ -256,8 +254,9 @@ java -jar target/notification-1.0.jar
 
 ## 🔒 Segurança e Boas Práticas (implementação atual)
 
-- O service valida `id` (obrigatório).
-- Tratamento de exceções é feito via `NotificationProcessingException` (e controller captura exceções em `/notification/consume` devolvendo status `error`).
+- O endpoint `POST /notification/consume` **não aceita** `id` no request: o serviço gera o `id` no backend e devolve no response.
+- O serviço valida `id` **apenas** nos endpoints que recebem `id` via path (`GET /notification/{id}` e `POST /notification/send-email/{id}`).
+- O controller trata exceções no `POST /notification/consume`, retornando `status: "error"` (sem stacktrace para o cliente).
 - Recomendado para evolução futura:
   - validações mais completas (ex.: e-mail formatado, tamanho de msg)
   - autenticação/autorização (ex.: JWT)
