@@ -77,7 +77,6 @@ public class NotificationService {
             throw new NotificationProcessingException("Notification not found for ID: " + id);
         }
 
-        // Integração real com e-mail fica a cargo de um provedor; por enquanto, sinalizamos sucesso.
         return "ok";
     }
 

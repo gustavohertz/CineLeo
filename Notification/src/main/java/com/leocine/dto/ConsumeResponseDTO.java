@@ -3,7 +3,7 @@ package com.leocine.dto;
 public class ConsumeResponseDTO {
 
     private String id;
-    private String status; // ok | error
+    private String status;
 
     public ConsumeResponseDTO() {
     }

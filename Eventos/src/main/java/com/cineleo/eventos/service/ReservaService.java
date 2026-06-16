@@ -5,6 +5,7 @@ import com.cineleo.eventos.client.UsuarioClient;
 import com.cineleo.eventos.dto.PagamentoReservaRequestDTO;
 import com.cineleo.eventos.dto.ReservaRequestDTO;
 import com.cineleo.eventos.dto.ReservaResponseDTO;
+import com.cineleo.eventos.dto.PagamentoEvento;
 import com.cineleo.eventos.entity.Reserva;
 import com.cineleo.eventos.entity.Sessao;
 import com.cineleo.eventos.exception.BusinessException;
@@ -14,6 +15,8 @@ import com.cineleo.eventos.repository.SessaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.kafka.core.KafkaTemplate;
+import com.cineleo.eventos.dto.PagamentoEvento;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -27,6 +30,7 @@ public class ReservaService {
     private final SessaoRepository sessaoRepository;
     private final UsuarioClient usuarioClient;
     private final PagamentoClient pagamentoClient;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     @Transactional(readOnly = true)
     public List<ReservaResponseDTO> listarPorSessao(Long sessaoId) {
@@ -135,12 +139,21 @@ public class ReservaService {
 
         if (aprovado) {
             reserva.setStatus(Reserva.StatusReserva.CONFIRMADA);
+            PagamentoEvento evento = new PagamentoEvento(
+                reserva.getId().toString(), reserva.getUsuarioId().toString(), reserva.getEmailCliente(), reserva.getCpfCliente(), 
+                "APROVADO", null, pagamentoId
+            );
+            kafkaTemplate.send("cinema.pagamento.aprovado", evento);
         } else {
             reserva.setStatus(Reserva.StatusReserva.PAGAMENTO_RECUSADO);
-            // Devolve assentos
             Sessao sessao = reserva.getSessao();
             sessao.setAssentosDisponiveis(sessao.getAssentosDisponiveis() + reserva.getQuantidadeIngressos());
             sessaoRepository.save(sessao);
+            PagamentoEvento evento = new PagamentoEvento(
+                reserva.getId().toString(), reserva.getUsuarioId().toString(), reserva.getEmailCliente(), reserva.getCpfCliente(), 
+                "RECUSADO", "O cartão foi recusado pelo banco.", pagamentoId
+            );
+            kafkaTemplate.send("cinema.pagamento.recusado", evento);
         }
 
         return ReservaResponseDTO.from(reservaRepository.save(reserva));
