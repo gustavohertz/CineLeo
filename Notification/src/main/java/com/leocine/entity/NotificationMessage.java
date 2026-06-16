@@ -7,6 +7,8 @@ import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "notification_messages")
 public class NotificationMessage {
@@ -34,46 +36,6 @@ public class NotificationMessage {
         this.userID = userID;
         this.userEmail = userEmail;
         this.msgString = msgString;
-        this.dateTime = dateTime;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getUserID() {
-        return userID;
-    }
-
-    public void setUserID(String userID) {
-        this.userID = userID;
-    }
-
-    public String getUserEmail() {
-        return userEmail;
-    }
-
-    public void setUserEmail(String userEmail) {
-        this.userEmail = userEmail;
-    }
-
-    public String getMsgString() {
-        return msgString;
-    }
-
-    public void setMsgString(String msgString) {
-        this.msgString = msgString;
-    }
-
-    public OffsetDateTime getDateTime() {
-        return dateTime;
-    }
-
-    public void setDateTime(OffsetDateTime dateTime) {
         this.dateTime = dateTime;
     }
 }
