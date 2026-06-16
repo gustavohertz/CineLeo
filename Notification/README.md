@@ -1,48 +1,25 @@
 # 📬 Notification & Messaging Service
 
-Microsserviço de notificações e mensageria desenvolvido em **Java 21**, **Spring Boot 3** e **Maven**, responsável pelo envio e consumo de mensagens, notificações e comunicação assíncrona entre sistemas.
+Microsserviço de notificações e mensageria desenvolvido em **Java 21**, **Spring Boot 3** e **Maven**. Responsável por receber (via REST) notificações/mensagens, persistir em **PostgreSQL** e permitir consumo/consulta por **ID**.
+
+> Observação: a aplicação mantém também um **cache em memória** (`memoryStore`) para consulta imediata. A persistência ocorre via JPA/EntityManager (`NotificationRepository`).
+
+---
 
 ## 🚀 Tecnologias
 
-* Java 21
-* Spring Boot 3
-* Maven
-* REST API
-* JSON
-* JPA (PostgreSQL)
-* REST API
-* JSON
-* JUnit
-* Docker (opcional)
-
+- Java 21
+- Spring Boot 3
+- Maven
+- REST API
+- JSON
+- JPA (PostgreSQL)
+- JUnit (testes)
+- Docker (PostgreSQL via `docker-compose.yml`)
 
 ---
 
-# 📋 Funcionalidades
-
-### Mensageria
-
-* Envio de mensagens para filas/tópicos
-* Consumo assíncrono de mensagens
-* Suporte a diferentes protocolos (HTTP, AMQP, etc.)
-* Confirmação de entrega (ACK/NACK)
-
-### Notificações
-
-* Notificação por e-mail, SMS, push (a definir)
-* Agendamento de notificações
-* Priorização de canais
-
-### Monitoramento
-
-* Health check do serviço
-* Criamento e Rastreamento de mensagens
-
----
-
-# 🏗️ Arquitetura
-
-O projeto segue a arquitetura em camadas:
+## 🏗️ Arquitetura (camadas)
 
 ```text
 Controller
@@ -53,178 +30,207 @@ Service
    ↓
 Repository
    ↓
-DataBase
+Database (PostgreSQL)
 ```
-
-### Controller
-
-Responsável pelas rotas HTTP (health check, envio de notificações).
-
-### DTO
-
-Responsável pela transferência de dados entre camadas.
-
-### Service
-
-Responsável pelas regras de negócio e integração com o broker de mensageria.
-
-### Repository
-
-Pode ser utilizado para persistência de logs/status de notificações.
-
-### DataBase
-
-Persistência em **PostgreSQL** para armazenar as notificações (mensagens) pelo `id`.
 
 ---
 
-# ⚙️ Executando o Projeto
+## ⚙️ Configuração (porta e banco)
 
-## Clonar repositório
+A API roda na porta definida em:
+
+- `Notification/src/main/resources/application.properties`
+  - `server.port=8000`
+  - PostgreSQL:
+    - `spring.datasource.url=jdbc:postgresql://localhost:5432/postgres`
+    - `spring.datasource.username=postgres`
+    - `spring.datasource.password=root`
+
+> Em `spring.jpa.hibernate.ddl-auto=update`, o schema é atualizado automaticamente com base nas entidades.
+
+---
+
+## 🐘 Subindo o PostgreSQL com Docker (recomendado)
+
+1. Na pasta `Notification/`, suba o banco com:
 
 ```bash
-git clone https://github.com/seu-usuario/notification-service.git
+docker compose up -d
 ```
 
-```bash
-cd Notification
-```
+2. O `docker-compose.yml` cria um container com:
+- DB: `postgres`
+- user: `postgres`
+- password: `root`
+- porta: `5432:5432`
 
-## Compilar
+---
 
+## ▶️ Executando o projeto
+
+Na pasta `Notification/`:
+
+### Compilar
 ```bash
 mvn clean install
 ```
 
-## Executar
-
+### Rodar
 ```bash
 mvn spring-boot:run
 ```
 
-A aplicação será iniciada em:
-
-```text
-http://localhost:8000
-```
+A API estará disponível em:
+- http://localhost:8000
 
 ---
 
-# 📌 Endpoints e consumo de mensagens
+## 📌 Endpoints
 
-## 1 - Health Check
+### 1) Health Check
 
-### Request
-
+**Request**
 ```http
 GET /health-check
 ```
 
----
-
-## 2 - Consumir/ingestar mensagem (HTTP)
-
-> Este Notification é independente: você pode enviar a mensagem via REST para persistir no PostgreSQL.
-
-### Request
-
-```http
-POST /notification/consume
-Content-Type: application/json
-```
-
-### Body (JSON)
-
-```json
-{
-  "id": "1",
-  "userID": "10",
-  "userEmail": "user@email.com",
-  "msgString": "Mensagem",
-  "dateTime": "2026-06-16T10:00:00Z"
-}
-```
-
-### Response
-
-```json
-{
-  "success": true,
-  "message": "Notification stored successfully"
-}
-```
-
----
-
-## 3 - Consultar mensagem por ID
-
-### Request
-
-```http
-GET /notification/{id}
-```
-
-### Response
-
-```json
-{
-  "id": "1",
-  "userID": "10",
-  "userEmail": "user@email.com",
-  "msgString": "Mensagem",
-  "dateTime": "2026-06-16T10:00:00Z"
-}
-```
-
-
-
-### Exemplo cURL
-
-```bash
-curl --request GET \
-  --url http://localhost:8000/health-check
-```
-
-### Response
-
+**Response (200)**
 ```json
 {
   "success": "ok"
 }
 ```
 
-> O endpoint verifica se o serviço está ativo e pronto para receber requisições. Por enquanto, retorna um status simples de saúde. Validações mais detalhadas (conexão com broker, configurações) podem ser adicionadas posteriormente.
-
----
-
-# 📊 Fluxo da Aplicação (futuro)
-
-```text
-Sistema Externo
-   ↓
-Envia mensagem via REST
-   ↓
-Serviço publica no Broker
-   ↓
-Consumidor processa
-   ↓
-Notificação é entregue ao destinatário
+**Response (503)**
+Quando a porta do servidor estiver inválida (<= 0):
+```json
+{
+  "success": "error",
+  "message": "Invalid server port: X"
+}
 ```
 
 ---
 
-# 🔒 Segurança
+### 2) Consumir/ingestar notificação (HTTP)
 
-* Sanitização de entrada
-* Tratamento global de exceções
-* Logs de auditoria
-* Mascaramento de dados sensíveis (chaves de API, credenciais)
+Este endpoint **recebe** um payload e:
+- valida `id` (obrigatório)
+- salva em `memoryStore`
+- tenta persistir via `NotificationRepository`
+- retorna status `ok` ou `error` sem stacktrace para o cliente
+
+**Request**
+```http
+POST /notification/consume
+Content-Type: application/json
+```
+
+#### Body (JSON)
+> Campos:
+- `id` (String, obrigatório)
+- `userID` (String)
+- `userEmail` (String)
+- `msgString` (String)
+- `dateTime` (OffsetDateTime opcional; se vier `null`, o service usa `now()`)
+
+Exemplo:
+```json
+{
+  "id": "1",
+  "userID": "10",
+  "userEmail": "user@email.com",
+  "msgString": "Mensagem",
+  "dateTime": "2026-06-16T10:00:00Z"
+}
+```
+
+**Response (200)**
+```json
+{
+  "id": "1",
+  "status": "ok"
+}
+```
+
+Em caso de erro:
+```json
+{
+  "id": "1",
+  "status": "error"
+}
+```
 
 ---
 
-# 🧪 Testes
+### 3) Consultar notificação por ID
 
-Executar testes automatizados:
+**Request**
+```http
+GET /notification/{id}
+```
+
+**Response (200)**
+```json
+{
+  "id": "1",
+  "userID": "10",
+  "userEmail": "user@email.com",
+  "msgString": "Mensagem",
+  "dateTime": "2026-06-16T10:00:00Z"
+}
+```
+
+> Caso `id` seja inválido/vazio ou a notificação não exista, o service lança `NotificationProcessingException`.
+
+---
+
+### 4) Enviar e-mail por ID (stub)
+
+Este endpoint executa uma regra de negócio: **enviar e-mail apenas 1 vez por ID**.
+Por enquanto, a integração real de e-mail não está implementada; a resposta indica sucesso/falha conforme a regra.
+
+**Request**
+```http
+POST /notification/send-email/{id}
+```
+
+**Response (200)**
+```json
+"ok"
+```
+
+Se tentar reenviar para o mesmo `id`, a aplicação lança exceção (tratamento via exception handler, se existir no projeto).
+
+---
+
+## 🧾 Exemplos cURL
+
+### Health Check
+```bash
+curl -X GET http://localhost:8000/health-check
+```
+
+### Consume (POST)
+```bash
+curl -X POST http://localhost:8000/notification/consume ^
+  -H "Content-Type: application/json" ^
+  -d "{\"id\":\"1\",\"userID\":\"10\",\"userEmail\":\"user@email.com\",\"msgString\":\"Mensagem\",\"dateTime\":\"2026-06-16T10:00:00Z\"}"
+```
+
+### Buscar por ID
+```bash
+curl -X GET http://localhost:8000/notification/1
+```
+
+### Enviar e-mail por ID
+```bash
+curl -X POST http://localhost:8000/notification/send-email/1
+```
+
+---
+
+## 🧪 Testes
 
 ```bash
 mvn test
@@ -232,26 +238,34 @@ mvn test
 
 ---
 
-# 📦 Build para Produção
+## 📦 Build para Produção
 
 ```bash
 mvn clean package
 ```
 
-Arquivo gerado:
-
-```text
-target/notification-service.jar
-```
+Saída:
+- `target/notification-1.0.jar` (arquivo gerado pelo build)
 
 Executar:
-
 ```bash
-java -jar target/notification-service.jar
+java -jar target/notification-1.0.jar
 ```
 
 ---
 
-# 📄 Licença
+## 🔒 Segurança e Boas Práticas (implementação atual)
 
-Projeto desenvolvido para fins educacionais e demonstração de arquitetura de microsserviços utilizando Java 21, Spring Boot e Maven.
+- O service valida `id` (obrigatório).
+- Tratamento de exceções é feito via `NotificationProcessingException` (e controller captura exceções em `/notification/consume` devolvendo status `error`).
+- Recomendado para evolução futura:
+  - validações mais completas (ex.: e-mail formatado, tamanho de msg)
+  - autenticação/autorização (ex.: JWT)
+  - sanitização/limites de payload
+  - logs de auditoria e correlação de requisições
+
+---
+
+## 📄 License
+
+Projeto educacional/demonstração de arquitetura de microsserviços usando Java 21, Spring Boot e Maven.
