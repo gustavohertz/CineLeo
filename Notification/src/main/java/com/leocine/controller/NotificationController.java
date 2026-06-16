@@ -1,12 +1,17 @@
 package com.leocine.controller;
 
+import com.leocine.dto.ConsumeResponseDTO;
+import com.leocine.dto.NotificationRequestDTO;
+import com.leocine.dto.NotificationResponseDTO;
+import com.leocine.service.NotificationService;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import com.leocine.service.NotificationService;
 
 @RestController
 @RequestMapping("/notification")
@@ -18,13 +23,27 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
 
-    @PostMapping("/send")
-    public ResponseEntity<String> sendNotification(@RequestBody String notificationRequest) {
-        return ResponseEntity.ok("Notification sent successfully");
+    @PostMapping("/consume")
+    public ResponseEntity<ConsumeResponseDTO> consumeNotification(@RequestBody NotificationRequestDTO notificationRequest) {
+        try {
+            notificationService.consumeNotification(notificationRequest);
+            return ResponseEntity.ok(new ConsumeResponseDTO(notificationRequest.getId(), "ok"));
+        } catch (Exception e) {
+            String id = notificationRequest != null ? notificationRequest.getId() : null;
+            return ResponseEntity.ok(new ConsumeResponseDTO(id, "error"));
+        }
     }
 
+    @PostMapping("/send-email/{id}")
+    public ResponseEntity<String> sendEmailById(@PathVariable String id) {
+        return ResponseEntity.ok(notificationService.sendEmailById(id));
+    }
+
+
     @GetMapping("/{id}")
-    public ResponseEntity<String> getNotificationById(String id) {
-        return ResponseEntity.ok("Notification details for ID: " + id);
+    public ResponseEntity<NotificationResponseDTO> getNotificationById(@PathVariable String id) {
+        NotificationResponseDTO response = notificationService.getNotificationById(id);
+        return ResponseEntity.ok(response);
     }
 }
+

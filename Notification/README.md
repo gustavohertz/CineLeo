@@ -9,9 +9,12 @@ Microsserviço de notificações e mensageria desenvolvido em **Java 21**, **Spr
 * Maven
 * REST API
 * JSON
-* Spring Cloud Stream (RabbitMQ / Kafka)
+* JPA (PostgreSQL)
+* REST API
+* JSON
 * JUnit
 * Docker (opcional)
+
 
 ---
 
@@ -33,7 +36,7 @@ Microsserviço de notificações e mensageria desenvolvido em **Java 21**, **Spr
 ### Monitoramento
 
 * Health check do serviço
-* Rastreamento de mensagens (futuro)
+* Criamento e Rastreamento de mensagens
 
 ---
 
@@ -71,7 +74,7 @@ Pode ser utilizado para persistência de logs/status de notificações.
 
 ### DataBase
 
-Comunicação assíncrona (RabbitMQ, Kafka, etc.).
+Persistência em **PostgreSQL** para armazenar as notificações (mensagens) pelo `id`.
 
 ---
 
@@ -107,7 +110,7 @@ http://localhost:8000
 
 ---
 
-# 📌 Endpoints
+# 📌 Endpoints e consumo de mensagens
 
 ## 1 - Health Check
 
@@ -116,6 +119,64 @@ http://localhost:8000
 ```http
 GET /health-check
 ```
+
+---
+
+## 2 - Consumir/ingestar mensagem (HTTP)
+
+> Este Notification é independente: você pode enviar a mensagem via REST para persistir no PostgreSQL.
+
+### Request
+
+```http
+POST /notification/consume
+Content-Type: application/json
+```
+
+### Body (JSON)
+
+```json
+{
+  "id": "1",
+  "userID": "10",
+  "userEmail": "user@email.com",
+  "msgString": "Mensagem",
+  "dateTime": "2026-06-16T10:00:00Z"
+}
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "message": "Notification stored successfully"
+}
+```
+
+---
+
+## 3 - Consultar mensagem por ID
+
+### Request
+
+```http
+GET /notification/{id}
+```
+
+### Response
+
+```json
+{
+  "id": "1",
+  "userID": "10",
+  "userEmail": "user@email.com",
+  "msgString": "Mensagem",
+  "dateTime": "2026-06-16T10:00:00Z"
+}
+```
+
+
 
 ### Exemplo cURL
 
