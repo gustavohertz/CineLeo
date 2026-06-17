@@ -4,12 +4,11 @@ import com.leocine.entity.NotificationMessage;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
-
-import java.util.Map;
+import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
-
-import org.springframework.stereotype.Repository;
+import java.util.HashMap;
+import java.util.Map;
 
 @Repository
 public class NotificationRepository {
@@ -32,7 +31,7 @@ public class NotificationRepository {
         Object dateTimeObj = notificationData.get("dateTime");
         if (dateTimeObj instanceof OffsetDateTime) {
             message.setDateTime((OffsetDateTime) dateTimeObj);
-        } else if (dateTimeObj == null) {
+        } else {
             message.setDateTime(OffsetDateTime.now());
         }
 
@@ -50,13 +49,13 @@ public class NotificationRepository {
             return null;
         }
 
-        return Map.of(
-                "id", found.getId(),
-                "userID", found.getUserID(),
-                "userEmail", found.getUserEmail(),
-                "msgString", found.getMsgString(),
-                "dateTime", found.getDateTime()
-        );
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", found.getId());
+        response.put("userID", found.getUserID());
+        response.put("userEmail", found.getUserEmail());
+        response.put("msgString", found.getMsgString());
+        response.put("dateTime", found.getDateTime());
+
+        return response;
     }
 }
-

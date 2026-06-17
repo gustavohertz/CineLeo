@@ -7,6 +7,7 @@ import com.leocine.repository.NotificationRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -31,7 +32,10 @@ public class NotificationService {
             throw new NotificationProcessingException("Notification request is required");
         }
 
-        OffsetDateTime dateTime = request.getDateTime() != null ? request.getDateTime() : OffsetDateTime.now();
+        OffsetDateTime dateTime = request.getDateTime() != null
+                ? request.getDateTime()
+                : OffsetDateTime.now();
+
         String generatedId = UUID.randomUUID().toString();
 
         NotificationResponseDTO response = new NotificationResponseDTO();
@@ -44,27 +48,29 @@ public class NotificationService {
         memoryStore.put(response.getId(), response);
 
         try {
-            Map<String, Object> notificationData = Map.of(
-                    "id", response.getId(),
-                    "userID", response.getUserID(),
-                    "userEmail", response.getUserEmail(),
-                    "msgString", response.getMsgString(),
-                    "dateTime", response.getDateTime()
-            );
+            Map<String, Object> notificationData = new HashMap<>();
+
+            notificationData.put("id", response.getId());
+            notificationData.put("userID", response.getUserID());
+            notificationData.put("userEmail", response.getUserEmail());
+            notificationData.put("msgString", response.getMsgString());
+            notificationData.put("dateTime", response.getDateTime());
+
             notificationRepository.save(notificationData);
+
         } catch (Exception e) {
-            throw new NotificationProcessingException("Failed to save notification", e);
+            throw new NotificationProcessingException(
+                    "Failed to save notification", e);
         }
 
         return response;
     }
-
     public NotificationResponseDTO consumeNotification(NotificationRequestDTO request) {
         return createNotification(request);
     }
 
     public String sendEmailById(String id) {
-        if (id == null || id.isBlank()) {
+        if (id == null) {
             throw new NotificationProcessingException("Notification id is required");
         }
 
@@ -82,7 +88,7 @@ public class NotificationService {
 
 
     public NotificationResponseDTO getNotificationById(String id) {
-        if (id == null || id.isBlank()) {
+        if (id == null) {
             throw new NotificationProcessingException("Notification id is required");
         }
 
