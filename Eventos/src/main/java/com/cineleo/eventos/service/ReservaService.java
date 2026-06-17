@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.kafka.core.KafkaTemplate;
-import com.cineleo.eventos.dto.PagamentoEvento;
 
 import java.math.BigDecimal;
 import java.util.List;
