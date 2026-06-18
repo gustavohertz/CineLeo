@@ -22,8 +22,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(new ErrorResponse(HttpStatus.UNPROCESSABLE_ENTITY.value(), ex.getMessage()));
+        ErrorResponse error = new ErrorResponse(HttpStatus.valueOf(422).value(), ex.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.valueOf(422));
     }
 
     @ExceptionHandler(ConflictException.class)

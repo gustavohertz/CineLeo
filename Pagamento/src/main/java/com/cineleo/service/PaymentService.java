@@ -22,9 +22,9 @@ public class PaymentService {
     }
 
     public PaymentResponseDTO createCardPayment(PaymentCardRequestDTO request) {
-        // Dados fixos para sandbox – não coletamos do cliente
+        // dados de cartão fake (hardcord)
         final String HOLDER_EMAIL = "cliente@asaas.com";
-        final String HOLDER_CPF = "92643603010";               // sem pontuação
+        final String HOLDER_CPF = "92643603010";
         final String HOLDER_POSTAL_CODE = "23045040";
         final String HOLDER_ADDRESS_NUMBER = "123";
         final String HOLDER_PHONE = "24981513930";
@@ -42,9 +42,9 @@ public class PaymentService {
                         "expiryYear", request.card().expiryYear(),
                         "ccv", request.card().ccv()
                 ),
-                "authorizeOnly", false,                     // false = captura real
+                "authorizeOnly", false,
                 "creditCardHolderInfo", Map.of(
-                        "name", request.card().holderName(), // mesmo nome do cartão
+                        "name", request.card().holderName(),
                         "email", HOLDER_EMAIL,
                         "cpfCnpj", HOLDER_CPF,
                         "postalCode", HOLDER_POSTAL_CODE,

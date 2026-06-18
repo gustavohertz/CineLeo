@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="8ac5f33d-ba33-49fb-b8c4-81f9878831de" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/../Eventos/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../Eventos/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Eventos/src/main/java/com/cineleo/eventos/EventosApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Eventos/src/main/java/com/cineleo/eventos/EventosApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Eventos/src/main/java/com/cineleo/eventos/service/ReservaService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Eventos/src/main/java/com/cineleo/eventos/service/ReservaService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Eventos/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../Eventos/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Gateway/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../Gateway/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Gateway/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../Gateway/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Gateway/target/classes/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../Gateway/target/classes/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Gateway/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/../Gateway/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Kafka/src/main/java/com/infnet/microservicesKafka/Services/NotificacaoConsumerService.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Kafka/src/main/java/com/infnet/microservicesKafka/Services/NotificacaoConsumerService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/leocine/controller/HealthCheckController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/leocine/controller/HealthCheckController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/leocine/dto/ConsumeResponseDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/leocine/dto/ConsumeResponseDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/leocine/entity/NotificationMessage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/leocine/entity/NotificationMessage.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/leocine/notificationApp.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/leocine/notificationApp.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/leocine/service/NotificationService.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/leocine/service/NotificationService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Usuarios/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../Usuarios/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Usuarios/src/main/java/com/cineleo/usuarios/UsuariosApplication.java" beforeDir="false" afterPath="$PROJECT_DIR$/../Usuarios/src/main/java/com/cineleo/usuarios/UsuariosApplication.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Usuarios/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/../Usuarios/src/main/resources/application.properties" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 3
+}]]></component>
+  <component name="ProjectId" id="3FEjqeVuHFOCTjzhoG4f6FiXTVc" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "C:/Users/Neologic/IdeaProjects/CineLeo/Notification"
+  }
+}]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="Notification" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="Notification" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="8ac5f33d-ba33-49fb-b8c4-81f9878831de" name="Changes" comment="" />
+      <created>1781647323433</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1781647323433</updated>
+    </task>
+    <servers />
+  </component>
+</project>
