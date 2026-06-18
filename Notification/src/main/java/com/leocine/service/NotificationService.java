@@ -2,41 +2,49 @@ package com.leocine.service;
 
 import com.leocine.dto.NotificationRequestDTO;
 import com.leocine.dto.NotificationResponseDTO;
+import com.leocine.entity.NotificationMessage;
 import com.leocine.exception.NotificationProcessingException;
-import com.leocine.repository.NotificationRepository;
+import com.leocine.repository.NotificationJpaRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-
 import java.time.OffsetDateTime;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-
 @Service
 public class NotificationService {
 
-    private final NotificationRepository notificationRepository;
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
+
+    private final NotificationJpaRepository notificationRepository;
 
     private final Map<String, NotificationResponseDTO> memoryStore = new ConcurrentHashMap<>();
 
     private final Set<String> emailSentIds = ConcurrentHashMap.newKeySet();
 
-    public NotificationService(NotificationRepository notificationRepository) {
+    public NotificationService(NotificationJpaRepository notificationRepository) {
         this.notificationRepository = notificationRepository;
     }
 
     public NotificationResponseDTO createNotification(NotificationRequestDTO request) {
-        if (request == null) {
-            throw new NotificationProcessingException("Notification request is required");
-        }
-
         OffsetDateTime dateTime = request.getDateTime() != null
                 ? request.getDateTime()
                 : OffsetDateTime.now();
 
         String generatedId = UUID.randomUUID().toString();
+
+        NotificationMessage entity = new NotificationMessage();
+        entity.setId(generatedId);
+        entity.setUserID(request.getUserID());
+        entity.setUserEmail(request.getUserEmail());
+        entity.setMsgString(request.getMsgString());
+        entity.setDateTime(dateTime);
+
+        notificationRepository.save(entity);
+        log.info("Notification saved to DB: id={}", generatedId);
 
         NotificationResponseDTO response = new NotificationResponseDTO();
         response.setId(generatedId);
@@ -45,84 +53,64 @@ public class NotificationService {
         response.setMsgString(request.getMsgString());
         response.setDateTime(dateTime);
 
-        memoryStore.put(response.getId(), response);
-
-        try {
-            Map<String, Object> notificationData = new HashMap<>();
-
-            notificationData.put("id", response.getId());
-            notificationData.put("userID", response.getUserID());
-            notificationData.put("userEmail", response.getUserEmail());
-            notificationData.put("msgString", response.getMsgString());
-            notificationData.put("dateTime", response.getDateTime());
-
-            notificationRepository.save(notificationData);
-
-        } catch (Exception e) {
-            throw new NotificationProcessingException(
-                    "Failed to save notification", e);
-        }
+        memoryStore.put(generatedId, response);
+        log.debug("Notification cached: id={}", generatedId);
 
         return response;
     }
+
     public NotificationResponseDTO consumeNotification(NotificationRequestDTO request) {
         return createNotification(request);
     }
 
-    public String sendEmailById(String id) {
+    public void sendEmailById(String id) {
         if (id == null) {
             throw new NotificationProcessingException("Notification id is required");
         }
 
-        if (!emailSentIds.add(id)) {
+        if (emailSentIds.contains(id)) {
             throw new NotificationProcessingException("E-mail already sent for notification id: " + id);
         }
 
-        NotificationResponseDTO notification = getNotificationById(id);
-        if (notification == null) {
-            throw new NotificationProcessingException("Notification not found for ID: " + id);
+        NotificationMessage entity = notificationRepository.findById(id)
+                .orElseThrow(() -> new NotificationProcessingException("Notification not found for ID: " + id));
+
+        if (entity.getSentAt() != null) {
+            emailSentIds.add(id);
+            throw new NotificationProcessingException("E-mail already sent for notification id: " + id);
         }
 
-        return "ok";
+        entity.setSentAt(OffsetDateTime.now());
+        notificationRepository.save(entity);
+        emailSentIds.add(id);
+        log.info("Email sent for notification id={}", id);
     }
-
 
     public NotificationResponseDTO getNotificationById(String id) {
         if (id == null) {
             throw new NotificationProcessingException("Notification id is required");
         }
 
-        NotificationResponseDTO found = memoryStore.get(id);
-        if (found != null) {
-            return found;
+        NotificationResponseDTO cached = memoryStore.get(id);
+        if (cached != null) {
+            return cached;
         }
 
-        try {
-            Map<String, Object> notificationData = notificationRepository.findById(id);
-            if (notificationData == null) {
-                throw new NotificationProcessingException("Notification not found for ID: " + id);
-            }
+        NotificationMessage entity = notificationRepository.findById(id)
+                .orElseThrow(() -> new NotificationProcessingException("Notification not found for ID: " + id));
 
-            NotificationResponseDTO response = new NotificationResponseDTO();
-            response.setId((String) notificationData.get("id"));
-            response.setUserID((String) notificationData.get("userID"));
-            response.setUserEmail((String) notificationData.get("userEmail"));
-            response.setMsgString((String) notificationData.get("msgString"));
-
-            Object dateTimeObj = notificationData.get("dateTime");
-            if (dateTimeObj instanceof OffsetDateTime) {
-                response.setDateTime((OffsetDateTime) dateTimeObj);
-            }
-
-            memoryStore.put(response.getId(), response);
-            return response;
-        } catch (NotificationProcessingException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new NotificationProcessingException("Failed to retrieve notification", e);
-        }
-
+        NotificationResponseDTO response = mapToResponse(entity);
+        memoryStore.put(id, response);
+        return response;
     }
 
+    private NotificationResponseDTO mapToResponse(NotificationMessage entity) {
+        NotificationResponseDTO dto = new NotificationResponseDTO();
+        dto.setId(entity.getId());
+        dto.setUserID(entity.getUserID());
+        dto.setUserEmail(entity.getUserEmail());
+        dto.setMsgString(entity.getMsgString());
+        dto.setDateTime(entity.getDateTime());
+        return dto;
+    }
 }
-

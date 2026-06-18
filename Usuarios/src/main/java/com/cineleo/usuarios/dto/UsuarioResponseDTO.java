@@ -1,10 +1,11 @@
 package com.cineleo.usuarios.dto;
 
-import com.cineleo.usuarios.entity.Usuario;
+import com.cineleo.usuarios.entity.UsuarioEntity;
 import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Data
 @Builder
@@ -15,18 +16,20 @@ public class UsuarioResponseDTO {
     private Integer idade;
     private String email;
     private String cpf;
-    private Usuario.StatusUsuario status;
+    private boolean ativo;
     private LocalDateTime criadoEm;
+    private Set<String> roles;
 
-    public static UsuarioResponseDTO from(Usuario usuario) {
+    public static UsuarioResponseDTO from(UsuarioEntity usuario) {
         return UsuarioResponseDTO.builder()
                 .id(usuario.getId())
                 .nome(usuario.getNome())
                 .idade(usuario.getIdade())
                 .email(usuario.getEmail())
                 .cpf(usuario.getCpf())
-                .status(usuario.getStatus())
+                .ativo(usuario.isAtivo())
                 .criadoEm(usuario.getCriadoEm())
+                .roles(usuario.getRoles())
                 .build();
     }
 }
