@@ -27,6 +27,7 @@ public class MenuInterativoRunner implements CommandLineRunner {
             System.out.println("2 - Meus Ingressos");
             System.out.println("3 - Minha Conta");
             System.out.println("4 - Fazer Login / Trocar de Conta");
+            System.out.println("5 - Fazer Cadastro");
             System.out.println("0 - Sair");
             System.out.print("Opção: ");
 
@@ -45,6 +46,9 @@ public class MenuInterativoRunner implements CommandLineRunner {
                         break;
                     case "4":
                         autenticacaoCliFlow.realizarLoginMock(scanner);
+                        break;
+                    case "5":
+                        autenticacaoCliFlow.realizarCadastro(scanner);
                         break;
                     case "0":
                         System.out.println("Saindo do terminal do CineLeo...");

@@ -4,6 +4,8 @@ import com.cineleo.eventos.exception.BusinessException;
 import com.cineleo.eventos.exception.ResourceNotFoundException;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -29,8 +31,18 @@ public class UsuarioClient {
         }
     }
 
+    public UsuarioDTO criarUsuario(UsuarioDTO usuarioDTO) {
+        try {
+            return restTemplate.postForObject(usuariosUrl + "/usuarios", usuarioDTO, UsuarioDTO.class);
+        } catch (Exception ex) {
+            throw new BusinessException("Serviço de usuários indisponível ou erro ao criar: " + ex.getMessage());
+        }
+    }
+
     @Data
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class UsuarioDTO {
         private Long id;
         private String nome;

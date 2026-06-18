@@ -41,4 +41,34 @@ public class AutenticacaoCliFlow {
 
         System.out.println("Login realizado com sucesso! Bem-vindo, " + usuario.getNome());
     }
+
+    public void realizarCadastro(Scanner scanner) {
+        System.out.println("\n[Cadastro de Usuário]");
+        System.out.print("Nome: ");
+        String nome = scanner.nextLine();
+
+        System.out.print("Email: ");
+        String email = scanner.nextLine();
+
+        System.out.print("CPF: ");
+        String cpf = scanner.nextLine();
+
+        UsuarioClient.UsuarioDTO dto = UsuarioClient.UsuarioDTO.builder()
+                .nome(nome)
+                .email(email)
+                .cpf(cpf)
+                .build();
+
+        System.out.println("Criando usuário...");
+        try {
+            UsuarioClient.UsuarioDTO usuarioCriado = usuarioClient.criarUsuario(dto);
+            System.out.println("Usuário criado com sucesso! ID: " + usuarioCriado.getId());
+
+            cliState.setUsuarioLogado(usuarioCriado);
+            cliState.setUsuarioLogadoId(usuarioCriado.getId());
+            System.out.println("Login realizado automaticamente! Bem-vindo, " + usuarioCriado.getNome());
+        } catch (Exception e) {
+            System.out.println("Erro ao cadastrar usuário: " + e.getMessage());
+        }
+    }
 }
