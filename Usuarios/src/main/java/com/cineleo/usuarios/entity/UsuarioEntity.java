@@ -1,20 +1,19 @@
 package com.cineleo.usuarios.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
-@Table(name = "usuarios")
+@Table(name = "usuarios", schema = "auth_service")
 @Data
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
-public class Usuario {
+@NoArgsConstructor
+public class UsuarioEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,12 +35,23 @@ public class Usuario {
     @Builder.Default
     private LocalDateTime criadoEm = LocalDateTime.now();
 
-    @Column(nullable = false)
-    @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private StatusUsuario status = StatusUsuario.ATIVO;
+    @Column(name = "senha_hash", nullable = false)
+    private String senhaHash;
 
-    public enum StatusUsuario {
-        ATIVO, INATIVO
-    }
+    @Column(name = "terminal_id", length = 50)
+    private String terminalId;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean ativo = true;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "usuario_roles",
+            schema = "auth_service",
+            joinColumns = @JoinColumn(name = "usuario_id")
+    )
+    @Column(name = "role")
+    @Builder.Default
+    private Set<String> roles = new HashSet<>();
 }

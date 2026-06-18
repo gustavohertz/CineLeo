@@ -1,108 +1,195 @@
 # 📬 Notification & Messaging Service
 
-Microsserviço de notificações e mensageria desenvolvido em **Java 21**, **Spring Boot 3** e **Maven**. Responsável por receber (via REST) notificações/mensagens, persistir em **PostgreSQL** e permitir consumo/consulta por **ID**.
+Microsserviço de notificações e mensageria desenvolvido em **Java 21**, **Spring Boot 3** e **Maven**.
 
-> Observação: a aplicação mantém também um **cache em memória** (`memoryStore`) para consulta imediata. A persistência ocorre via JPA/EntityManager (`NotificationRepository`).
+Responsável por receber (via REST) notificações/mensagens, persisti-las em **PostgreSQL** e permitir envio de e-mail (simulado) e consulta por **ID**.
 
----
-
-## 🚀 Tecnologias
-
-- Java 21
-- Spring Boot 3
-- Maven
-- REST API
-- JSON
-- JPA (PostgreSQL)
-- JUnit (testes)
-- Docker (PostgreSQL via `docker-compose.yml`)
+A aplicação mantém um **cache em memória** para consultas rápidas e garante consistência entre cache e banco de dados. O envio de e-mail é **idempotente**, com controle persistido.
 
 ---
 
-## 🏗️ Arquitetura (camadas)
+# 📑 Sumário
+
+* [Tecnologias](#-tecnologias)
+* [Arquitetura](#-arquitetura-camadas)
+* [Configuração](#-configuração-porta-e-banco)
+* [PostgreSQL com Docker](#-subindo-o-postgresql-com-docker-recomendado)
+* [Execução](#-executando-o-projeto)
+* [Endpoints](#-endpoints)
+
+  * [Health Check](#1-health-check)
+  * [Consumir Notificação](#2-consumiringestar-notificação-http)
+  * [Consultar por ID](#3-consultar-notificação-por-id)
+  * [Enviar E-mail](#4-enviar-e-mail-por-id-simulação-idempotente)
+* [Exemplos cURL](#-exemplos-curl-windows-com-)
+* [Testes](#-testes)
+* [Build para Produção](#-build-para-produção)
+* [Segurança e Boas Práticas](#-segurança-e-boas-práticas-após-refatoração)
+* [Licença](#-license)
+
+---
+
+# 🚀 Tecnologias
+
+* Java 21
+* Spring Boot 3
+* Spring Data JPA
+* PostgreSQL
+* Maven
+* REST API / JSON
+* Bean Validation (`jakarta.validation`)
+* Docker (PostgreSQL via `docker-compose.yml`)
+* JUnit (testes)
+
+---
+
+# 🏗️ Arquitetura (camadas)
 
 ```text
 Controller
-   ↓
+   │
+   ├── Trata requisições HTTP
+   └── Delega processamento
+
 DTO
-   ↓
+   │
+   ├── @Valid
+   ├── @NotBlank
+   └── @Email
+
 Service
-   ↓
+   │
+   ├── Regras de negócio
+   ├── Cache em memória
+   └── Orquestração
+
 Repository
-   ↓
-Database (PostgreSQL)
+   │
+   └── Spring Data JPA
+
+Database
+   │
+   └── PostgreSQL
 ```
 
+### Tratamento de erros
+
+Os erros são tratados de forma centralizada através de um:
+
+```java
+GlobalExceptionHandler
+```
+
+Retornando códigos HTTP apropriados:
+
+| Código | Significado           |
+| ------ | --------------------- |
+| 400    | Bad Request           |
+| 404    | Not Found             |
+| 409    | Conflict              |
+| 500    | Internal Server Error |
+
 ---
 
-## ⚙️ Configuração (porta e banco)
+# ⚙️ Configuração (porta e banco)
 
-A API roda na porta definida em:
+Arquivo:
 
-- `Notification/src/main/resources/application.properties`
-  - `server.port=8000`
-  - PostgreSQL:
-    - `spring.datasource.url=jdbc:postgresql://localhost:5432/postgres`
-    - `spring.datasource.username=postgres`
-    - `spring.datasource.password=root`
+```text
+Notification/src/main/resources/application.properties
+```
 
-> Em `spring.jpa.hibernate.ddl-auto=update`, o schema é atualizado automaticamente com base nas entidades.
+### Porta da aplicação
+
+```properties
+server.port=8000
+```
+
+### PostgreSQL
+
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/postgres
+
+spring.datasource.username=postgres
+
+spring.datasource.password=root
+```
+
+### Hibernate
+
+```properties
+spring.jpa.hibernate.ddl-auto=update
+```
+
+Mantém o schema sincronizado com as entidades.
 
 ---
 
-## 🐘 Subindo o PostgreSQL com Docker (recomendado)
+# 🐘 Subindo o PostgreSQL com Docker (recomendado)
 
-1. Na pasta `Notification/`, suba o banco com:
+Na pasta `Notification/` execute:
 
 ```bash
 docker compose up -d
 ```
 
-2. O `docker-compose.yml` cria um container com:
-- DB: `postgres`
-- user: `postgres`
-- password: `root`
-- porta: `5432:5432`
+O `docker-compose.yml` cria um container com:
+
+| Configuração | Valor     |
+| ------------ | --------- |
+| Banco        | postgres  |
+| Usuário      | postgres  |
+| Senha        | root      |
+| Porta        | 5432:5432 |
 
 ---
 
-## ▶️ Executando o projeto
+# ▶️ Executando o projeto
 
 Na pasta `Notification/`:
 
 ### Compilar
+
 ```bash
 mvn clean install
 ```
 
 ### Rodar
+
 ```bash
 mvn spring-boot:run
 ```
 
-A API estará disponível em:
-- http://localhost:8000
+A API ficará disponível em:
+
+```text
+http://localhost:8000
+```
 
 ---
 
-## 📌 Endpoints
+# 📌 Endpoints
 
-### 1) Health Check
+## 1. Health Check
 
-**Request**
+### Request
+
 ```http
 GET /health-check
 ```
 
-**Response (200)**
+### Response (200)
+
 ```json
 {
   "success": "ok"
 }
 ```
 
-**Response (503)**
-Quando a porta do servidor estiver inválida (<= 0):
+### Response (503)
+
+Caso a porta do servidor seja inválida:
+
 ```json
 {
   "success": "error",
@@ -112,28 +199,19 @@ Quando a porta do servidor estiver inválida (<= 0):
 
 ---
 
-### 2) Consumir/ingestar notificação (HTTP)
+## 2. Consumir/ingestar notificação (HTTP)
 
-Este endpoint **recebe** um payload e:
-- **NÃO aceita** `id` no request (a API gera um id no backend)
-- salva em `memoryStore`
-- tenta persistir via `NotificationRepository`
-- retorna status `ok` ou `error` sem stacktrace para o cliente
+Cria uma nova notificação com ID gerado automaticamente pelo backend.
 
-**Request**
+### Request
+
 ```http
 POST /notification/consume
 Content-Type: application/json
 ```
 
-#### Body (JSON)
-> Campos:
-- `userID` (String)
-- `userEmail` (String)
-- `msgString` (String)
-- `dateTime` (OffsetDateTime opcional; se vier `null`, o service usa `now()`)
+### Body
 
-Exemplo:
 ```json
 {
   "userID": "10",
@@ -143,35 +221,59 @@ Exemplo:
 }
 ```
 
-**Response (200)**
+> Todos os campos são obrigatórios, exceto `dateTime`.
+
+### Response (201 Created)
+
 ```json
 {
-  "id": "<gerado_pelo_backend>",
+  "id": "uuid-gerado-pelo-backend",
   "status": "ok"
 }
 ```
 
-Em caso de erro:
+### Erro 400 - Bad Request
+
+Campos inválidos ou ausentes.
+
 ```json
 {
-  "id": null,
-  "status": "error"
+  "timestamp": "2026-06-17T10:30:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "errors": {
+    "userEmail": "Invalid email format"
+  }
+}
+```
+
+### Erro 500 - Internal Server Error
+
+```json
+{
+  "timestamp": "...",
+  "status": 500,
+  "error": "Internal Server Error",
+  "message": "An unexpected error occurred"
 }
 ```
 
 ---
 
-### 3) Consultar notificação por ID
+## 3. Consultar notificação por ID
 
-**Request**
+### Request
+
 ```http
 GET /notification/{id}
 ```
 
-**Response (200)**
+### Response (200)
+
 ```json
 {
-  "id": "1",
+  "id": "uuid-gerado",
   "userID": "10",
   "userEmail": "user@email.com",
   "msgString": "Mensagem",
@@ -179,56 +281,102 @@ GET /notification/{id}
 }
 ```
 
-> Caso `id` seja inválido/vazio ou a notificação não exista, o service lança `NotificationProcessingException`.
+### Erro 404 - Not Found
+
+```json
+{
+  "timestamp": "...",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Notification not found for ID: xyz"
+}
+```
 
 ---
 
-### 4) Enviar e-mail por ID (stub)
+## 4. Enviar e-mail por ID (simulação idempotente)
 
-Este endpoint executa uma regra de negócio: **enviar e-mail apenas 1 vez por ID**.
-Por enquanto, a integração real de e-mail não está implementada; a resposta indica sucesso/falha conforme a regra.
+Simula o envio de e-mail.
 
-**Request**
+O sistema garante que um mesmo ID tenha o e-mail enviado apenas uma vez, persistindo o momento do envio.
+
+### Request
+
 ```http
 POST /notification/send-email/{id}
 ```
 
-**Response (200)**
+### Response (200 OK)
+
 ```json
-"ok"
+"Email sent successfully"
 ```
 
-Se tentar reenviar para o mesmo `id`, a aplicação lança exceção (tratamento via exception handler, se existir no projeto).
+### Erro 409 - Conflict
+
+E-mail já enviado anteriormente.
+
+```json
+{
+  "timestamp": "...",
+  "status": 409,
+  "error": "Conflict",
+  "message": "E-mail already sent for notification id: xyz"
+}
+```
+
+### Erro 404 - Not Found
+
+```json
+{
+  "timestamp": "...",
+  "status": 404,
+  "error": "Not Found",
+  "message": "Notification not found for ID: xyz"
+}
+```
 
 ---
 
-## 🧾 Exemplos cURL
+# 🧾 Exemplos cURL (Windows, com ^)
 
-### Health Check
+## Health Check
+
 ```bash
 curl -X GET http://localhost:8000/health-check
 ```
 
-### Consume (POST)
+---
+
+## Consumir Notificação
+
 ```bash
 curl -X POST http://localhost:8000/notification/consume ^
   -H "Content-Type: application/json" ^
   -d "{\"userID\":\"10\",\"userEmail\":\"user@email.com\",\"msgString\":\"Mensagem\",\"dateTime\":\"2026-06-16T10:00:00Z\"}"
 ```
 
-### Buscar por ID
-```bash
-curl -X GET http://localhost:8000/notification/1
-```
+---
 
-### Enviar e-mail por ID
+## Buscar por ID
+
 ```bash
-curl -X POST http://localhost:8000/notification/send-email/1
+curl -X GET http://localhost:8000/notification/{id}
 ```
 
 ---
 
-## 🧪 Testes
+## Enviar E-mail
+
+```bash
+curl -X POST http://localhost:8000/notification/send-email/{id}
+```
+
+---
+
+# 🧪 Testes
+
+Executar todos os testes:
 
 ```bash
 mvn test
@@ -236,35 +384,108 @@ mvn test
 
 ---
 
-## 📦 Build para Produção
+# 📦 Build para Produção
+
+Gerar o artefato:
 
 ```bash
 mvn clean package
 ```
 
-Saída:
-- `target/notification-1.0.jar` (arquivo gerado pelo build)
+### Saída
 
-Executar:
+```text
+target/notification-1.0.jar
+```
+
+### Executar
+
 ```bash
 java -jar target/notification-1.0.jar
 ```
 
 ---
 
-## 🔒 Segurança e Boas Práticas (implementação atual)
+# 🔒 Segurança e Boas Práticas (após refatoração)
 
-- O endpoint `POST /notification/consume` **não aceita** `id` no request: o serviço gera o `id` no backend e devolve no response.
-- O serviço valida `id` **apenas** nos endpoints que recebem `id` via path (`GET /notification/{id}` e `POST /notification/send-email/{id}`).
-- O controller trata exceções no `POST /notification/consume`, retornando `status: "error"` (sem stacktrace para o cliente).
-- Recomendado para evolução futura:
-  - validações mais completas (ex.: e-mail formatado, tamanho de msg)
-  - autenticação/autorização (ex.: JWT)
-  - sanitização/limites de payload
-  - logs de auditoria e correlação de requisições
+## ID gerado pelo backend
+
+O endpoint de criação não aceita ID externo, prevenindo manipulação maliciosa.
 
 ---
 
-## 📄 License
+## Validação de entrada
 
-Projeto educacional/demonstração de arquitetura de microsserviços usando Java 21, Spring Boot e Maven.
+Utilização de:
+
+* `@Valid`
+* `@NotBlank`
+* `@Email`
+
+Retornando erros detalhados com HTTP 400.
+
+---
+
+## Tratamento centralizado de exceções
+
+Implementado através de:
+
+```java
+@RestControllerAdvice
+```
+
+Mapeando exceções para:
+
+* 400 Bad Request
+* 404 Not Found
+* 409 Conflict
+* 500 Internal Server Error
+
+Sem exposição de stack traces.
+
+---
+
+## Idempotência no envio de e-mails
+
+O campo:
+
+```java
+sentAt
+```
+
+é persistido no banco.
+
+Mesmo após reinicialização da aplicação, reenvios são bloqueados.
+
+---
+
+## Cache em memória consistente
+
+Os dados são adicionados ao cache apenas após persistência bem-sucedida no banco de dados.
+
+---
+
+# 🚀 Evoluções Futuras
+
+* Adicionar autenticação/autorização via JWT.
+* Implementar envio real de e-mails.
+* Integração com SMTP.
+* Integração com filas (Kafka/RabbitMQ).
+* Rate Limiting.
+* Sanitização de payloads.
+* Logs de auditoria estruturados.
+* Observabilidade com Prometheus e Micrometer.
+* OpenAPI / Swagger.
+
+---
+
+# 📄 License
+
+Projeto educacional e de demonstração de arquitetura de microsserviços utilizando:
+
+* Java 21
+* Spring Boot 3
+* Spring Data JPA
+* PostgreSQL
+
+Desenvolvido para estudo e evolução de arquiteturas baseadas em microsserviços.

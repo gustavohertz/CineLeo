@@ -78,6 +78,9 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<release>21</release>
+				</configuration>
 				<executions>
 					<execution>
 						<id>default-compile</id>
@@ -86,6 +89,7 @@
 							<goal>compile</goal>
 						</goals>
 						<configuration>
+							<release>21</release>
 							<annotationProcessorPaths>
 								<path>
 									<groupId>org.projectlombok</groupId>
@@ -101,10 +105,11 @@
 							<goal>testCompile</goal>
 						</goals>
 						<configuration>
+							<release>21</release>
 							<annotationProcessorPaths>
 								<path>
 									<groupId>org.projectlombok</groupId>
-									<artifactId>lombok</artifactId>
+										<artifactId>lombok</artifactId>
 								</path>
 							</annotationProcessorPaths>
 						</configuration>

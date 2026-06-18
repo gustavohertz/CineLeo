@@ -1,12 +1,8 @@
 package com.leocine.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-
 import java.time.OffsetDateTime;
 
 @Getter
@@ -30,15 +26,9 @@ public class NotificationMessage {
     @Column(name = "date_time", nullable = false)
     private OffsetDateTime dateTime;
 
+    @Column(name = "sent_at")
+    private OffsetDateTime sentAt;
+
     public NotificationMessage() {
     }
-
-    public NotificationMessage(String id, String userID, String userEmail, String msgString, OffsetDateTime dateTime) {
-        this.id = id;
-        this.userID = userID;
-        this.userEmail = userEmail;
-        this.msgString = msgString;
-        this.dateTime = dateTime;
-    }
 }
-
