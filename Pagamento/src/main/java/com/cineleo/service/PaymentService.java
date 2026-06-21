@@ -7,6 +7,7 @@ import com.cineleo.repository.AsaasConnection;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Set;
@@ -15,20 +16,30 @@ import java.util.Set;
 public class PaymentService {
 
     private final AsaasConnection asaasConnection;
+    private final NotificationClientService notificationClientService;
     private static final Set<String> APPROVED_STATUSES = Set.of("CONFIRMED", "RECEIVED");
+    private static final String HOLDER_EMAIL = "cliente@asaas.com"; // e-mail fixo do sandbox
 
-    public PaymentService(AsaasConnection asaasConnection) {
+    // Dados fixos do cartão – nunca enviados pelo cliente
+    private static final String CARD_NUMBER = "4111111111111111";
+    private static final String CARD_HOLDER_NAME = "João da Silva";
+    private static final String CARD_EXPIRY_MONTH = "12";
+    private static final String CARD_EXPIRY_YEAR = "2027";
+    private static final String CARD_CCV = "123";
+
+    // Demais dados fixos do titular (sandbox)
+    private static final String HOLDER_CPF = "92643603010";
+    private static final String HOLDER_POSTAL_CODE = "23045040";
+    private static final String HOLDER_ADDRESS_NUMBER = "123";
+    private static final String HOLDER_PHONE = "24981513930";
+
+    public PaymentService(AsaasConnection asaasConnection,
+            NotificationClientService notificationClientService) {
         this.asaasConnection = asaasConnection;
+        this.notificationClientService = notificationClientService;
     }
 
     public PaymentResponseDTO createCardPayment(PaymentCardRequestDTO request) {
-        // Dados fixos para sandbox – não coletamos do cliente
-        final String HOLDER_EMAIL = "cliente@asaas.com";
-        final String HOLDER_CPF = "92643603010";               // sem pontuação
-        final String HOLDER_POSTAL_CODE = "23045040";
-        final String HOLDER_ADDRESS_NUMBER = "123";
-        final String HOLDER_PHONE = "24981513930";
-
         Map<String, Object> body = Map.of(
                 "customer", request.customerId(),
                 "billingType", request.billingType(),
@@ -36,28 +47,36 @@ public class PaymentService {
                 "dueDate", LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE),
                 "description", request.description() != null ? request.description() : "",
                 "creditCard", Map.of(
-                        "holderName", request.card().holderName(),
-                        "number", request.card().number(),
-                        "expiryMonth", request.card().expiryMonth(),
-                        "expiryYear", request.card().expiryYear(),
-                        "ccv", request.card().ccv()
-                ),
-                "authorizeOnly", false,                     // false = captura real
+                        "holderName", CARD_HOLDER_NAME,
+                        "number", CARD_NUMBER,
+                        "expiryMonth", CARD_EXPIRY_MONTH,
+                        "expiryYear", CARD_EXPIRY_YEAR,
+                        "ccv", CARD_CCV),
+                "authorizeOnly", false,
                 "creditCardHolderInfo", Map.of(
-                        "name", request.card().holderName(), // mesmo nome do cartão
+                        "name", CARD_HOLDER_NAME,
                         "email", HOLDER_EMAIL,
                         "cpfCnpj", HOLDER_CPF,
                         "postalCode", HOLDER_POSTAL_CODE,
                         "addressNumber", HOLDER_ADDRESS_NUMBER,
-                        "phone", HOLDER_PHONE
-                )
-        );
+                        "phone", HOLDER_PHONE));
 
         try {
             Map<String, Object> response = asaasConnection.createPayment(body);
             String status = (String) response.get("status");
             String paymentId = (String) response.get("id");
             String mappedStatus = APPROVED_STATUSES.contains(status) ? "aprovado" : "rejeitado";
+
+            String mensagem = String.format(
+                    "Pagamento processado: id=%s, status=%s, valor=%.2f, descrição=%s",
+                    paymentId, mappedStatus, request.value(),
+                    request.description() != null ? request.description() : "");
+            notificationClientService.createAndSendEmail(
+                    request.customerId(),
+                    HOLDER_EMAIL,
+                    mensagem,
+                    OffsetDateTime.now());
+
             return new PaymentResponseDTO(mappedStatus, paymentId);
         } catch (Exception e) {
             throw new PaymentProcessingException("Falha ao processar pagamento: " + e.getMessage());
