@@ -132,6 +132,15 @@ services:
       - notification-service
     restart: unless-stopped
 
+  observabilidade-service:
+    build: ./Observabilidade
+    container_name: observabilidade-service
+    ports:
+      - "8090:8090"
+    depends_on:
+      - eureka-server
+    restart: unless-stopped
+
 volumes:
   postgres-eventos-data:
   postgres-usuarios-data:
