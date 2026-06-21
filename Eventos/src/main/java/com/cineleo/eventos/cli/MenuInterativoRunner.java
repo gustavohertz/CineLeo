@@ -45,7 +45,7 @@ public class MenuInterativoRunner implements CommandLineRunner {
                         contaCliFlow.executar(scanner);
                         break;
                     case "4":
-                        autenticacaoCliFlow.realizarLoginMock(scanner);
+                        autenticacaoCliFlow.realizarLogin(scanner);
                         break;
                     case "5":
                         autenticacaoCliFlow.realizarCadastro(scanner);
