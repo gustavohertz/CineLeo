@@ -84,7 +84,7 @@ public class HealthCheckService {
         } catch (Exception e) {
             long tempo = System.currentTimeMillis() - inicio;
 
-            // tenta health-check customizado
+            
             try {
                 String customUrl = instancia.getUri() + "/health-check";
                 ResponseEntity<String> response = restTemplate.getForEntity(customUrl, String.class);
