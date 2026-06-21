@@ -32,8 +32,7 @@ public class UsuarioEntity {
     private String cpf;
 
     @Column(nullable = false, updatable = false)
-    @Builder.Default
-    private LocalDateTime criadoEm = LocalDateTime.now();
+    private LocalDateTime criadoEm;
 
     @Column(name = "senha_hash", nullable = false)
     private String senhaHash;
@@ -54,4 +53,9 @@ public class UsuarioEntity {
     @Column(name = "role")
     @Builder.Default
     private Set<String> roles = new HashSet<>();
+
+    @PrePersist
+    private void prePersist() {
+        this.criadoEm = LocalDateTime.now();
+    }
 }
