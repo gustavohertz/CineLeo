@@ -71,15 +71,6 @@ services:
       timeout: 5s
       retries: 5
 
-  gateway-service:
-    build: ./Gateway
-    container_name: gateway-service
-    ports:
-      - "8080:8080"
-    depends_on:
-      - eureka-server
-    restart: unless-stopped
-
   usuarios-service:
     build: ./Usuarios
     container_name: usuarios-service
