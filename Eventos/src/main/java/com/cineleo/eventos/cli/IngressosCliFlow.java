@@ -18,7 +18,10 @@ public class IngressosCliFlow {
 
     public void executar(Scanner scanner) {
         System.out.println("\n--- Meus Ingressos ---");
-        autenticacaoCliFlow.garantirLogin(scanner);
+        if (!autenticacaoCliFlow.garantirLogin(scanner)) {
+            System.out.println("Login necessário para acessar seus ingressos.");
+            return;
+        }
 
         List<ReservaResponseDTO> minhasReservas = reservaService.listarPorEmail(cliState.getUsuarioLogado().getEmail());
         if (minhasReservas.isEmpty()) {
