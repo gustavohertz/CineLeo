@@ -33,13 +33,18 @@ public class Usuario {
     private String cpf;
 
     @Column(nullable = false, updatable = false)
-    @Builder.Default
-    private LocalDateTime criadoEm = LocalDateTime.now();
+    private LocalDateTime criadoEm;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private StatusUsuario status = StatusUsuario.ATIVO;
+
+    @PrePersist
+    private void prePersist() {
+        this.criadoEm = LocalDateTime.now();
+        if (this.status == null) this.status = StatusUsuario.ATIVO;
+    }
 
     public enum StatusUsuario {
         ATIVO, INATIVO
