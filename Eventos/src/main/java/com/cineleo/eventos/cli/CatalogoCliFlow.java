@@ -27,7 +27,7 @@ public class CatalogoCliFlow {
     public void executar(Scanner scanner) {
         System.out.println("\n--- Catálogo de Filmes ---");
         List<FilmeResponseDTO> filmes = filmeService.listarAtivos();
-        
+
         if (filmes.isEmpty()) {
             System.out.println("Nenhum filme em cartaz no momento.");
             return;
@@ -43,7 +43,7 @@ public class CatalogoCliFlow {
 
         System.out.println("\n--- Horários Disponíveis ---");
         List<SessaoResponseDTO> sessoes = sessaoService.listarPorFilme(filmeId);
-        
+
         if (sessoes.isEmpty()) {
             System.out.println("Nenhuma sessão disponível para este filme.");
             return;
@@ -57,7 +57,10 @@ public class CatalogoCliFlow {
         Long sessaoId = Long.parseLong(scanner.nextLine());
         if (sessaoId == 0) return;
 
-        autenticacaoCliFlow.garantirLogin(scanner);
+        if (!autenticacaoCliFlow.garantirLogin(scanner)) {
+            System.out.println("Login necessário para continuar. Voltando ao menu...");
+            return;
+        }
 
         System.out.print("\nQuantos assentos deseja comprar (Até 5)? ");
         int assentos = Integer.parseInt(scanner.nextLine());
@@ -77,7 +80,7 @@ public class CatalogoCliFlow {
         reservaDto.setUsuarioId(cliState.getUsuarioLogadoId());
         reservaDto.setSessaoId(sessaoId);
         reservaDto.setQuantidadeIngressos(assentos);
-        
+
         ReservaResponseDTO reservaCriada = reservaService.criar(reservaDto);
         System.out.println("Reserva criada! Código: " + reservaCriada.getCodigoConfirmacao() + " | Total: R$" + reservaCriada.getValorTotal());
 

@@ -14,8 +14,11 @@ public class ContaCliFlow {
 
     public void executar(Scanner scanner) {
         System.out.println("\n--- Minha Conta ---");
-        autenticacaoCliFlow.garantirLogin(scanner);
-        
+        if (!autenticacaoCliFlow.garantirLogin(scanner)) {
+            System.out.println("Login necessário para acessar sua conta.");
+            return;
+        }
+
         System.out.println("Nome: " + cliState.getUsuarioLogado().getNome());
         System.out.println("CPF: " + cliState.getUsuarioLogado().getCpf());
         System.out.println("E-mail: " + cliState.getUsuarioLogado().getEmail());

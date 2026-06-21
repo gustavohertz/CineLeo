@@ -2,6 +2,7 @@ package com.cineleo.eventos.client;
 
 import com.cineleo.eventos.exception.BusinessException;
 import com.cineleo.eventos.exception.ResourceNotFoundException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -10,16 +11,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Map;
+
 @Component
 @RequiredArgsConstructor
 public class UsuarioClient {
 
     private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${services.usuarios.url}")
     private String usuariosUrl;
 
-    // Login real
     public LoginResponse login(String email, String senha) {
         try {
             LoginRequest request = new LoginRequest(email, senha);
@@ -29,14 +32,18 @@ public class UsuarioClient {
                 throw new BusinessException("Falha na autenticação: resposta inválida");
             }
             return response;
+        } catch (HttpClientErrorException ex) {
+            if (ex.getStatusCode().value() == 401) {
+                throw new BusinessException("E-mail ou senha inválidos.");
+            }
+            throw parseError(ex);
         } catch (BusinessException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw new BusinessException("Serviço de usuários indisponível: " + ex.getMessage());
+            throw new BusinessException("Serviço de usuários indisponível");
         }
     }
 
-    // Cadastro real
     public UsuarioDTO criarUsuario(UsuarioRequest request) {
         try {
             UsuarioDTO response = restTemplate.postForObject(
@@ -45,6 +52,8 @@ public class UsuarioClient {
                 throw new BusinessException("Falha ao criar usuário: resposta inválida");
             }
             return response;
+        } catch (HttpClientErrorException ex) {
+            throw parseError(ex);
         } catch (BusinessException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -73,7 +82,7 @@ public class UsuarioClient {
         private String email;
         private String cpf;
         private boolean ativo;
-        private String status; // opcional, mantido para compatibilidade
+        private String status;
     }
 
     @Data
@@ -96,5 +105,23 @@ public class UsuarioClient {
         private String accessToken;
         private String tokenType;
         private long expiresIn;
+    }
+
+    private BusinessException parseError(HttpClientErrorException ex) {
+        try {
+            String body = ex.getResponseBodyAsString();
+            Map<String, Object> errorMap = objectMapper.readValue(body, Map.class);
+            if (errorMap.containsKey("erros") && errorMap.get("erros") instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, String> fieldErrors = (Map<String, String>) errorMap.get("erros");
+                StringBuilder sb = new StringBuilder();
+                fieldErrors.forEach((field, msg) -> sb.append(field).append(": ").append(msg).append("\n"));
+                return new BusinessException(sb.toString().trim());
+            }
+            if (errorMap.containsKey("mensagem")) {
+                return new BusinessException(errorMap.get("mensagem").toString());
+            }
+        } catch (Exception ignored) {}
+        return new BusinessException("Erro na requisição: " + ex.getMessage());
     }
 }

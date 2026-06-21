@@ -21,7 +21,6 @@ public class JwtUtil {
         byte[] decoded = Base64.getUrlDecoder().decode(parts[1]);
         String json = new String(decoded, StandardCharsets.UTF_8);
         try {
-            // Conversão simples com Jackson (disponível no classpath via Spring Boot)
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             return mapper.readValue(json, Map.class);
         } catch (Exception e) {
