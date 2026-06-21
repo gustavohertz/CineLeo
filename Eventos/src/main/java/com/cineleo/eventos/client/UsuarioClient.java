@@ -71,8 +71,6 @@ public class UsuarioClient {
         }
     }
 
-    // --- DTOs ---
-
     @Data
     @Builder
     public static class UsuarioDTO {

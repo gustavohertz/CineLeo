@@ -32,13 +32,11 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.buscarPorId(id));
     }
 
-    // Rota de cadastro com senha
     @PostMapping("/create")
     public ResponseEntity<UsuarioResponseDTO> criar(@RequestBody @Valid UsuarioRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(usuarioService.criar(dto));
     }
 
-    // Login
     @PostMapping("/login")
     public ResponseEntity<LoginReponseDTO> login(@RequestBody @Valid LoginRequestDTO request) {
         LoginReponseDTO login = authService.login(request);

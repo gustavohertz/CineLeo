@@ -106,14 +106,12 @@ public class ReservaService {
             throw new BusinessException("Somente reservas PENDENTES podem ser pagas");
         }
 
-        // Registra o cliente no gateway de pagamento
         String customerId = pagamentoClient.criarCustomer(
                 reserva.getNomeCliente(),
                 reserva.getEmailCliente(),
                 reserva.getCpfCliente()
         );
 
-        // Monta dados do cartão
         PagamentoClient.CartaoDTO cartao = new PagamentoClient.CartaoDTO();
         cartao.setNumero(dto.getCartao().getNumero());
         cartao.setNomeTitular(dto.getCartao().getNomeTitular());
@@ -124,7 +122,6 @@ public class ReservaService {
         String descricao = "Ingresso: " + reserva.getSessao().getFilme().getNome()
                 + " - " + reserva.getQuantidadeIngressos() + "x";
 
-        // Processa o pagamento
         String pagamentoId = pagamentoClient.processarPagamento(
                 customerId,
                 reserva.getValorTotal().doubleValue(),
@@ -132,7 +129,6 @@ public class ReservaService {
                 cartao
         );
 
-        // Verifica se foi aprovado
         boolean aprovado = pagamentoClient.verificarPagamento(pagamentoId);
 
         reserva.setIdPagamentoExterno(pagamentoId);

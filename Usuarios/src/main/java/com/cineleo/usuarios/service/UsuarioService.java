@@ -51,7 +51,7 @@ public class UsuarioService {
                 .cpf(dto.getCpf())
                 .senhaHash(passwordEncoder.encode(dto.getSenha()))
                 .ativo(true)
-                .roles(Set.of("USER"))   // role padrão para novos usuários
+                .roles(Set.of("USER"))
                 .build();
 
         return UsuarioResponseDTO.from(usuarioRepository.save(usuario));

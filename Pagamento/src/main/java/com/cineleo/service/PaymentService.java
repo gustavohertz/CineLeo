@@ -18,16 +18,14 @@ public class PaymentService {
     private final AsaasConnection asaasConnection;
     private final NotificationClientService notificationClientService;
     private static final Set<String> APPROVED_STATUSES = Set.of("CONFIRMED", "RECEIVED");
-    private static final String HOLDER_EMAIL = "cliente@asaas.com"; // e-mail fixo do sandbox
+    private static final String HOLDER_EMAIL = "cliente@asaas.com";
 
-    // Dados fixos do cartão – nunca enviados pelo cliente
     private static final String CARD_NUMBER = "4111111111111111";
     private static final String CARD_HOLDER_NAME = "João da Silva";
     private static final String CARD_EXPIRY_MONTH = "12";
     private static final String CARD_EXPIRY_YEAR = "2027";
     private static final String CARD_CCV = "123";
 
-    // Demais dados fixos do titular (sandbox)
     private static final String HOLDER_CPF = "92643603010";
     private static final String HOLDER_POSTAL_CODE = "23045040";
     private static final String HOLDER_ADDRESS_NUMBER = "123";

@@ -1,4 +1,3 @@
-// Pagamento/src/main/java/com/cineleo/service/NotificationClientService.java
 package com.cineleo.service;
 
 import com.cineleo.dto.ConsumeResponseDTO;
@@ -48,7 +47,6 @@ public class NotificationClientService {
             String notificationId = response.id();
             log.info("Notificação criada com sucesso: id={}", notificationId);
 
-            // email fake enviado
             restTemplate.postForObject(
                     notificationApiUrl + "/notification/send-email/" + notificationId,
                     null,

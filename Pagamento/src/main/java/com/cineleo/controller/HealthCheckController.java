@@ -26,14 +26,12 @@ public class HealthCheckController {
     public ResponseEntity<Map<String, String>> check() {
         Map<String, String> status = new HashMap<>();
 
-        // verifica se a porta é válida
         if (serverPort <= 0) {
             status.put("success", "error");
             status.put("message", "Invalid server port: " + serverPort);
             return ResponseEntity.status(503).body(status);
         }
 
-        // verifica se as propriedades obrigatórias estão preenchidas
         if (isBlank(asaasApiUrl)) {
             status.put("success", "error");
             status.put("message", "Property 'asaas.api.url' is missing or empty");
@@ -45,7 +43,6 @@ public class HealthCheckController {
             return ResponseEntity.status(503).body(status);
         }
 
-        // se tudo ok
         status.put("success", "ok");
         return ResponseEntity.ok(status);
     }
