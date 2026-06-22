@@ -1,67 +1,484 @@
-# 🚀 Estudo de Microsserviços: Spring Boot, Eureka & Apache Kafka
+# 🔁 Microservices Kafka - CineLeo
 
-Este repositório documenta um projeto de estudo prático focado na construção de uma arquitetura de microsserviços moderna utilizando **Java 21**, **Spring Boot 3.4.0** e **Spring Cloud 2024.0.0**. O objetivo principal é demonstrar a comunicação assíncrona orientada a eventos com **Apache Kafka** e o registro dinâmico de serviços com o **Netflix Eureka**.
+Microsserviço responsável pela **mensageria, processamento de eventos e envio real de e-mails** do ecossistema **CineLeo**.
 
-## 🛠️ Tecnologias Utilizadas
-
-*   **Java 21**
-*   **Spring Boot 3.4.0**
-*   **Spring Cloud 2024.0.0** (Netflix Eureka Server & Client)
-*   **Spring for Apache Kafka**
-*   **Apache Kafka (KRaft Mode)**
-*   **Docker & Docker Compose**
-*   **Maven**
-
-## 🏗️ Arquitetura do Projeto
-
-O ecossistema é composto por três blocos principais:
-
-1.  **Eureka Server (`/microservices`):** Atua como o *Service Registry* da arquitetura. Ele roda na porta `8761` e mantém um catálogo de todos os microsserviços ativos na rede.
-2.  **Microsserviço Kafka (`/microservicesKafka`):** Atua como um *Eureka Client* (rodando na porta `8081`). Ele se registra automaticamente no Eureka e contém serviços configurados para atuar como Produtor (`KafkaProducerService`) e Consumidor (`kafkaConsumerService`) de mensagens.
-3.  **Infraestrutura Kafka (`docker-compose.yml`):** Um broker do Apache Kafka rodando via Docker utilizando o modo moderno **KRaft** (eliminando a necessidade do Zookeeper), expondo a porta `9092`.
+Atua como consumidor de eventos Kafka relacionados a pagamentos e notificações, além de ser responsável pelo envio assíncrono de e-mails utilizando SMTP através do Spring Mail.
 
 ---
 
-## 💡 Principais Aprendizados e Soluções de Problemas
+# 📋 Sumário
 
-Durante o desenvolvimento deste estudo, lidamos com transições importantes do ecossistema Spring:
-
-*   **Conflito de Cliente Eureka (Jersey vs RestClient):** Nas versões mais recentes do Spring Cloud (2024.x) integradas ao Spring Boot 3.4.x, o cliente Eureka tenta buscar bibliotecas antigas do Jersey (`TransportClientFactories`), gerando o erro `java.lang.NoClassDefFoundError`.
-    *   *Solução:* Excluímos a dependência `eureka-client-jersey3` do `pom.xml` e forçamos o uso do cliente HTTP moderno do Spring através da propriedade `eureka.client.restclient.enabled=true`.
-*   **Gerenciamento de Versões (Kafka):** Forçar versões Release Candidate (RC) no `spring-kafka` causa conflitos com o motor interno do Kafka (`kafka-clients`) providenciado pelo Spring Boot.
-    *   *Solução:* Delegar o controle absoluto de versões para a tag `<parent>` do Spring Boot no `pom.xml`.
-*   **Testes vs Service Registry:** Executar o build do Maven (`mvn install`) aciona os testes de contexto. Se o Eureka estiver habilitado durante o teste, ele tenta conectar na rede e falha o build.
-    *   *Solução:* Utilizar `@SpringBootTest(properties = "eureka.client.enabled=false")` para isolar os testes.
+* [Visão Geral](#-visão-geral)
+* [Arquitetura](#-arquitetura)
+* [Estrutura do Projeto](#-estrutura-do-projeto)
+* [Tecnologias Utilizadas](#-tecnologias-utilizadas)
+* [Pré-requisitos](#-pré-requisitos)
+* [Configuração](#-configuração)
+* [Execução](#-execução)
+* [Tópicos Kafka](#-tópicos-kafka)
+* [Integrações](#-integrações)
+* [Fluxo de Processamento](#-fluxo-de-processamento)
+* [Endpoints Disponíveis](#-endpoints-disponíveis)
+* [Build e Containerização](#-build-e-containerização)
+* [Testes](#-testes)
+* [Melhorias Futuras](#-melhorias-futuras)
+* [Licença](#-licença)
 
 ---
 
-## ⚙️ Como Executar o Projeto
+# 🔍 Visão Geral
 
-### Pré-requisitos
-*   [Java 21+](https://jdk.java.net/21/)
-*   [Maven](https://maven.apache.org/)
-*   [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+O **Microservices Kafka** é responsável por processar eventos assíncronos dentro da arquitetura de microsserviços do CineLeo.
 
-### Passo 1: Subir o Apache Kafka
-Navegue até a raiz do projeto onde o arquivo `docker-compose.yml` está localizado e inicie o container:
-```bash
-docker-compose up -d
+### Principais responsabilidades
+
+✅ Consumir eventos de pagamento
+
+✅ Criar notificações automaticamente
+
+✅ Processar solicitações de envio de e-mails
+
+✅ Realizar envio SMTP real
+
+✅ Confirmar entregas via Kafka
+
+✅ Registrar falhas de envio
+
+✅ Integrar Notification Service ao Kafka
+
+✅ Garantir desacoplamento entre serviços
+
+---
+
+# 🏗 Arquitetura
+
+```text
+                      Eventos Service
+                             │
+                             │
+         ┌───────────────────┴───────────────────┐
+         │                                       │
+
+ cinema.pagamento.aprovado        cinema.pagamento.recusado
+         │                                       │
+         └───────────────────┬───────────────────┘
+                             ▼
+
+                 ┌──────────────────────┐
+                 │  Microservices Kafka │
+                 │        :8081         │
+                 └──────────┬───────────┘
+                            │
+
+         ┌──────────────────┼──────────────────┐
+         │                  │                  │
+         ▼                  ▼                  ▼
+
+ Notification       notification.email.send   SMTP
+    Service                 Topic          JavaMailSender
+       │                                      │
+       └──────────────► notification.email.sent
 ```
 
-### Passo 2: Iniciar o Eureka Server
-Navegue até o projeto do Registry (microservices) e inicie a aplicação:
+---
+
+# 📁 Estrutura do Projeto
+
+```text
+src/
+└── main/
+    ├── java/
+    │   └── com/cineleo/kafka/
+    │
+    ├── consumer/
+    │   ├── PaymentApprovedConsumer.java
+    │   ├── PaymentDeniedConsumer.java
+    │   └── EmailConsumer.java
+    │
+    ├── producer/
+    │   └── EmailStatusProducer.java
+    │
+    ├── service/
+    │   ├── NotificationService.java
+    │   └── EmailSenderService.java
+    │
+    ├── client/
+    │   └── NotificationClient.java
+    │
+    └── dto/
+        ├── PaymentEventDTO.java
+        ├── EmailRequestDTO.java
+        └── EmailStatusDTO.java
+
+src/main/resources/
+└── application.properties
+
+pom.xml
+Dockerfile
+```
+
+---
+
+# 🚀 Tecnologias Utilizadas
+
+| Tecnologia                  | Versão   |
+| --------------------------- | -------- |
+| Java                        | 21       |
+| Spring Boot                 | 3.4.0    |
+| Spring Kafka                | Latest   |
+| Spring Mail                 | Latest   |
+| Spring Cloud Netflix Eureka | 2024.0.0 |
+| Spring Boot Actuator        | Latest   |
+| Lombok                      | Latest   |
+| Maven                       | 3.8+     |
+| Docker                      | Opcional |
+
+---
+
+# 📋 Pré-requisitos
+
+Antes de executar o projeto:
+
+* JDK 21
+* Maven 3.8+
+* Apache Kafka
+* Eureka Server
+* Notification Service
+* Conta SMTP válida
+* Docker (opcional)
+
+Infraestrutura padrão:
+
+| Serviço              | Porta |
+| -------------------- | ----- |
+| Eureka Server        | 8761  |
+| Kafka                | 9092  |
+| Notification Service | 8000  |
+| Microservices Kafka  | 8081  |
+
+---
+
+# ⚙️ Configuração
+
+## application.properties
+
+```properties
+spring.application.name=microservicesKafka
+server.port=8081
+
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+
+spring.kafka.bootstrap-servers=localhost:9092
+spring.kafka.consumer.group-id=cineleo-notificacoes
+spring.kafka.consumer.auto-offset-reset=earliest
+
+spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.JsonDeserializer
+
+spring.kafka.consumer.properties.spring.json.trusted.packages=com.infnet.microservicesKafka.dto,com.leocine.entity
+
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.StringSerializer
+
+services.notification.url=http://localhost:8000
+
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=seuemail@gmail.com
+spring.mail.password=sua_senha_app
+
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+management.endpoints.web.exposure.include=health,info
+management.endpoint.health.show-details=always
+```
+
+---
+
+## Configuração SMTP
+
+### Gmail
+
+Utilize uma senha de aplicativo:
+
+```text
+Google Account
+ └── Segurança
+      └── Senhas de App
+```
+
+⚠️ Não utilize a senha principal da conta Google.
+
+---
+
+# ▶️ Execução
+
+## Subir Infraestrutura
+
+```bash
+docker compose up -d kafka eureka-server
+```
+
+---
+
+## Executar Aplicação
 
 ```bash
 mvn spring-boot:run
 ```
-Acesse http://localhost:8761 no navegador. Você verá o painel do Eureka, mas sem nenhuma instância registrada ainda.
 
-### Passo 3: Iniciar o Microsserviço Kafka
-Em um novo terminal, navegue até o projeto do cliente (microservicesKafka) e inicie a aplicação:
+ou execute a classe:
+
+```text
+MicroservicesKafkaApplication
+```
+
+Após iniciar, o serviço será registrado automaticamente no Eureka como:
+
+```text
+MICROSERVICESKAFKA
+```
+
+---
+
+# 📨 Tópicos Kafka
+
+| Tópico                      | Tipo     | Descrição                      |
+| --------------------------- | -------- | ------------------------------ |
+| `cinema.pagamento.aprovado` | Consumer | Pagamentos aprovados           |
+| `cinema.pagamento.recusado` | Consumer | Pagamentos recusados           |
+| `notification.email.send`   | Consumer | Solicitação de envio de e-mail |
+| `notification.email.sent`   | Producer | Resultado do envio             |
+
+---
+
+# 🔗 Integrações
+
+## Notification Service
+
+### Criar Notificação
+
+```http
+POST /notification/consume
+```
+
+Utilizado para registrar eventos de pagamento.
+
+---
+
+### Solicitar Envio de E-mail
+
+```http
+POST /notification/send-email/{id}
+```
+
+Mantido por compatibilidade com o fluxo atual.
+
+---
+
+## Servidor SMTP
+
+Responsável pelo envio efetivo das mensagens.
+
+Fluxo:
+
+```text
+Kafka Topic
+      │
+      ▼
+
+EmailConsumer
+      │
+      ▼
+
+EmailSenderService
+      │
+      ▼
+
+JavaMailSender
+      │
+      ▼
+
+Servidor SMTP
+      │
+      ▼
+
+Destinatário
+```
+
+---
+
+# 🔄 Fluxo de Processamento
+
+## Pagamento Aprovado
+
+```text
+Eventos Service
+      │
+      ▼
+
+cinema.pagamento.aprovado
+      │
+      ▼
+
+Microservices Kafka
+      │
+      ▼
+
+Notification Service
+      │
+      ▼
+
+notification.email.send
+      │
+      ▼
+
+SMTP
+      │
+      ▼
+
+notification.email.sent
+```
+
+---
+
+## Pagamento Recusado
+
+```text
+Eventos Service
+      │
+      ▼
+
+cinema.pagamento.recusado
+      │
+      ▼
+
+Notification Service
+      │
+      ▼
+
+Envio de E-mail
+```
+
+---
+
+# 🌐 Endpoints Disponíveis
+
+| Método | Endpoint           | Descrição                |
+| ------ | ------------------ | ------------------------ |
+| GET    | `/actuator/health` | Status da aplicação      |
+| GET    | `/actuator/info`   | Informações da aplicação |
+
+---
+
+## Health Check
+
+### Request
+
+```http
+GET /actuator/health
+```
+
+### Response
+
+```json
+{
+  "status": "UP"
+}
+```
+
+---
+
+# 🧪 Exemplos cURL
+
+## Health Check
 
 ```bash
-mvn spring-boot:run
+curl -X GET http://localhost:8081/actuator/health
 ```
-Após alguns segundos, atualize o painel do Eureka no navegador. Você verá o MICROSERVICESKAFKA registrado na lista de instâncias com o status UP.
 
-No console do microsserviço, você poderá acompanhar os logs do produtor enviando dados e do consumidor recebendo a mensagem do tópico Meu-topico-teste.
+---
+
+## Informações da Aplicação
+
+```bash
+curl -X GET http://localhost:8081/actuator/info
+```
+
+---
+
+# 🐳 Build e Containerização
+
+## Gerar JAR
+
+```bash
+mvn clean package
+```
+
+---
+
+## Executar JAR
+
+```bash
+java -jar target/microservices-kafka.jar
+```
+
+---
+
+## Construir Imagem Docker
+
+```bash
+docker build -t microservices-kafka .
+```
+
+---
+
+## Executar Container
+
+```bash
+docker run -p 8081:8081 microservices-kafka
+```
+
+---
+
+# ✅ Testes
+
+Executar todos os testes automatizados:
+
+```bash
+mvn test
+```
+
+Principais cenários:
+
+* Consumo de mensagens Kafka
+* Processamento de eventos
+* Integração Notification Service
+* Envio SMTP
+* Tratamento de erros
+* Publicação de status de entrega
+
+---
+
+# 🔮 Melhorias Futuras
+
+* Retry automático com Exponential Backoff
+* Dead Letter Queue (DLQ)
+* Integração Prometheus + Grafana
+* Templates HTML para e-mail
+* Rastreamento de entregas
+* Métricas detalhadas de consumo Kafka
+* Suporte a múltiplos provedores SMTP
+* Circuit Breaker com Resilience4j
+
+---
+
+# 📄 Licença
+
+Projeto desenvolvido para fins acadêmicos e educacionais como parte do ecossistema **CineLeo**.
+
+---
+
+## 👨‍💻 Desenvolvido para o Ecossistema CineLeo
+
+Kafka • Event Driven Architecture • SMTP • Spring Boot • Spring Kafka • Java 21
