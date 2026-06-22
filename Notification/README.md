@@ -1,232 +1,195 @@
-# 📬 Notification & Messaging Service - CineLeo
+# Notification & Messaging Service - CineLeo
 
 Microsserviço responsável pelo gerenciamento de notificações e orquestração de envio de e-mails do ecossistema **CineLeo**.
 
-Desenvolvido com **Java 21**, **Spring Boot 3**, **PostgreSQL** e **Apache Kafka**, este serviço recebe notificações via REST, realiza persistência em banco de dados e coordena o envio assíncrono de e-mails com confirmação de entrega.
+Desenvolvido com **Java 21**, **Spring Boot 3.5.3**, **PostgreSQL** e **Apache Kafka**, este serviço recebe notificações via REST, realiza persistência em banco de dados e coordena o envio assíncrono de e-mails com confirmação de entrega.
 
 ---
 
-# 📋 Sumário
+## Sumário
 
-* [Visão Geral](#-visão-geral)
-* [Arquitetura](#-arquitetura)
-* [Fluxo de Envio de E-mail](#-fluxo-de-envio-de-e-mail)
-* [Estrutura do Projeto](#-estrutura-do-projeto)
-* [Tecnologias Utilizadas](#-tecnologias-utilizadas)
-* [Pré-requisitos](#-pré-requisitos)
-* [Configuração](#-configuração)
-* [Banco de Dados](#-banco-de-dados)
-* [Execução](#-execução)
-* [Endpoints Disponíveis](#-endpoints-disponíveis)
-* [Tratamento de Erros](#-tratamento-de-erros)
-* [Build e Containerização](#-build-e-containerização)
-* [Testes](#-testes)
-* [Segurança e Boas Práticas](#-segurança-e-boas-práticas)
-* [Melhorias Futuras](#-melhorias-futuras)
-* [Licença](#-licença)
+* [Visão Geral](#visão-geral)
+* [Arquitetura](#arquitetura)
+* [Fluxo de Envio de E-mail](#fluxo-de-envio-de-e-mail)
+* [Estrutura do Projeto](#estrutura-do-projeto)
+* [Tecnologias Utilizadas](#tecnologias-utilizadas)
+* [Pré-requisitos](#pré-requisitos)
+* [Configuração](#configuração)
+* [Banco de Dados](#banco-de-dados)
+* [Execução](#execução)
+* [Endpoints Disponíveis](#endpoints-disponíveis)
+* [Tratamento de Erros](#tratamento-de-erros)
+* [Testes](#testes)
+* [Observabilidade](#observabilidade)
+* [Segurança e Boas Práticas](#segurança-e-boas-práticas)
+* [Melhorias Futuras](#melhorias-futuras)
 
 ---
 
-# 🔍 Visão Geral
+## Visão Geral
 
 O **Notification Service** é responsável por centralizar o gerenciamento de notificações dentro da arquitetura de microsserviços do CineLeo.
 
 ### Principais responsabilidades
 
-✅ Receber notificações via REST
-
-✅ Persistir notificações em PostgreSQL
-
-✅ Consultar notificações por ID
-
-✅ Publicar solicitações de envio no Kafka
-
-✅ Receber confirmação de entrega
-
-✅ Garantir idempotência no envio
-
-✅ Gerenciar cache em memória
-
-✅ Centralizar regras de negócio relacionadas a notificações
+- Receber notificações via REST
+- Persistir notificações em PostgreSQL
+- Consultar notificações por ID
+- Publicar solicitações de envio no Kafka
+- Receber confirmação de entrega
+- Garantir idempotência no envio
+- Gerenciar cache em memória
+- Enviar logs de requisições HTTP para o serviço de Observabilidade
 
 ---
 
-# 🏗 Arquitetura
+## Arquitetura
 
-```text id="v9g5mk"
+```
                     Cliente / Microsserviços
                                │
                                ▼
-
                   ┌─────────────────────────┐
-                  │ Notification Controller │
+                  │ Notification Controller  │
                   └─────────────┬───────────┘
                                 │
                                 ▼
-
                   ┌─────────────────────────┐
-                  │ Notification Service    │
+                  │  Notification Service   │
                   └─────────────┬───────────┘
                                 │
-
          ┌──────────────────────┼──────────────────────┐
          │                      │                      │
          ▼                      ▼                      ▼
-
- PostgreSQL              Cache Local          Kafka Producer
+    PostgreSQL            Cache Local          Kafka Producer
                                                      │
                                                      ▼
-
-                                     notification.email.send
+                                        notification.email.send
                                                      │
                                                      ▼
-
                                           Microservices Kafka
                                                      │
                                                      ▼
-
-                                     notification.email.sent
+                                        notification.email.sent
                                                      │
                                                      ▼
-
                                           Kafka Consumer
 ```
 
 ---
 
-# 🔄 Fluxo de Envio de E-mail
+## Fluxo de Envio de E-mail
 
-```text id="a4s0df"
+```
 Cliente
    │
    ▼
-
 POST /notification/send-email/{id}
    │
    ▼
-
 Notification Service
    │
    ▼
-
 Valida notificação
    │
    ▼
-
-Publica evento Kafka
-(notification.email.send)
+Publica evento Kafka (notification.email.send)
    │
    ▼
-
-Microservices Kafka
+Microservices Kafka → SMTP / JavaMailSender
    │
    ▼
-
-SMTP / JavaMailSender
-   │
-   ▼
-
 notification.email.sent
    │
    ▼
-
 Notification Service
-   │
-   ├── SENT
-   │      ▼
-   │   Atualiza banco
-   │   Retorna 200
-   │
-   └── FAILED
-          ▼
-      Retorna 502
+   ├── SENT    → Atualiza banco → Retorna 200
+   └── FAILED  → Retorna 502
 ```
 
 ---
 
-# 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
-```text id="f0b8sq"
-src/
-└── main/
-    ├── java/
-    │   └── com/cineleo/notification/
-    │
-    ├── controller/
-    │   ├── NotificationController.java
-    │   └── HealthCheckController.java
-    │
-    ├── service/
-    │   └── NotificationService.java
-    │
-    ├── repository/
-    │   └── NotificationRepository.java
-    │
-    ├── consumer/
-    │   └── EmailStatusConsumer.java
-    │
-    ├── producer/
-    │   └── EmailProducer.java
-    │
-    ├── dto/
-    │   ├── NotificationRequestDTO.java
-    │   ├── NotificationResponseDTO.java
-    │   └── EmailRequestDTO.java
-    │
-    └── entity/
-        └── Notification.java
-
-src/main/resources/
-└── application.properties
-
-pom.xml
-Dockerfile
+```
+Notification/
+├── pom.xml
+├── README.md
+└── src/
+    ├── main/
+    │   ├── java/com/leocine/
+    │   │   ├── notificationApp.java
+    │   │   ├── controller/
+    │   │   │   ├── NotificationController.java
+    │   │   │   └── HealthCheckController.java
+    │   │   ├── service/
+    │   │   │   └── NotificationService.java
+    │   │   ├── repository/
+    │   │   │   └── NotificationJpaRepository.java
+    │   │   ├── entity/
+    │   │   │   └── NotificationMessage.java
+    │   │   ├── dto/
+    │   │   │   ├── NotificationRequestDTO.java
+    │   │   │   ├── NotificationResponseDTO.java
+    │   │   │   └── ConsumeResponseDTO.java
+    │   │   ├── exception/
+    │   │   │   ├── GlobalExceptionHandler.java
+    │   │   │   └── NotificationProcessingException.java
+    │   │   └── interceptor/
+    │   │       ├── RequestLoggingInterceptor.java
+    │   │       ├── LogEventDTO.java
+    │   │       └── WebMvcConfig.java
+    │   └── resources/
+    │       └── application.properties
+    └── test/
+        └── java/com/leocine/service/
+            └── NotificationServiceTest.java
 ```
 
 ---
 
-# 🚀 Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
-| Tecnologia      | Versão   |
-| --------------- | -------- |
-| Java            | 21       |
-| Spring Boot     | 3.5.3    |
-| Spring Data JPA | Latest   |
-| Spring Kafka    | Latest   |
-| PostgreSQL      | 16       |
-| Lombok          | Latest   |
-| Bean Validation | Latest   |
-| JUnit 5         | Latest   |
-| Mockito         | Latest   |
-| Docker          | Opcional |
+| Tecnologia         | Versão |
+|--------------------|--------|
+| Java               | 21     |
+| Spring Boot        | 3.5.3  |
+| Spring Cloud       | 2025.0.0 |
+| Spring Data JPA    | Latest |
+| Spring Kafka       | Latest |
+| PostgreSQL         | 16     |
+| Lombok             | Latest |
+| Bean Validation    | Latest |
+| JUnit 5 + Mockito  | Latest |
+| Eureka Client      | Latest |
 
 ---
 
-# 📋 Pré-requisitos
+## Pré-requisitos
 
 * JDK 21
 * Maven 3.8+
 * PostgreSQL 16+
 * Apache Kafka
 * Eureka Server
-* Docker (opcional)
 
 Infraestrutura padrão:
 
 | Serviço              | Porta |
-| -------------------- | ----- |
+|----------------------|-------|
 | Notification Service | 8000  |
 | PostgreSQL           | 5432  |
 | Kafka                | 9092  |
 | Eureka Server        | 8761  |
+| Observabilidade      | 8090  |
 
 ---
 
-# ⚙️ Configuração
+## Configuração
 
-## application.properties
+### application.properties
 
-```properties id="mrny97"
+```properties
 spring.application.name=notification-service
 server.port=8000
 
@@ -246,18 +209,12 @@ spring.kafka.producer.value-serializer=org.springframework.kafka.support.seriali
 
 ---
 
-# 🐘 Banco de Dados
-
-## Subir PostgreSQL
-
-```bash id="g9cnwd"
-docker compose up -d
-```
+## Banco de Dados
 
 ### Configuração padrão
 
 | Parâmetro | Valor    |
-| --------- | -------- |
+|-----------|----------|
 | Banco     | postgres |
 | Usuário   | postgres |
 | Senha     | root     |
@@ -265,60 +222,38 @@ docker compose up -d
 
 ---
 
-# ▶️ Execução
+## Execução
 
-## Executar Aplicação
-
-```bash id="mxwe7r"
+```bash
 mvn spring-boot:run
 ```
 
-ou execute a classe:
-
-```text id="z48hbd"
-NotificationApplication
-```
-
-API disponível em:
-
-```text id="rvzqmv"
-http://localhost:8000
-```
+API disponível em: `http://localhost:8000`
 
 ---
 
-# 🌐 Endpoints Disponíveis
+## Endpoints Disponíveis
 
-## Health Check
+### Health Check
 
-### Request
-
-```http id="ib2t4m"
+```http
 GET /health-check
 ```
 
-### Response
-
-```json id="7a9yiu"
+```json
 {
   "success": "ok"
 }
 ```
 
----
+### Criar Notificação
 
-## Criar Notificação
-
-### Request
-
-```http id="9x4q4v"
+```http
 POST /notification/consume
 Content-Type: application/json
 ```
 
-### Body
-
-```json id="i0m83m"
+```json
 {
   "userID": "10",
   "userEmail": "user@email.com",
@@ -327,107 +262,44 @@ Content-Type: application/json
 }
 ```
 
-### Response
+### Consultar Notificação
 
-```json id="0vjqsl"
-{
-  "id": "uuid-gerado",
-  "status": "ok"
-}
-```
-
----
-
-## Consultar Notificação
-
-### Request
-
-```http id="wb4hzr"
+```http
 GET /notification/{id}
 ```
 
-### Response
+### Enviar E-mail
 
-```json id="3wwkjm"
-{
-  "id": "abc-123",
-  "userID": "10",
-  "userEmail": "user@email.com"
-}
-```
-
----
-
-## Enviar E-mail
-
-### Request
-
-```http id="n7ihgo"
+```http
 POST /notification/send-email/{id}
 ```
 
-### Sucesso
-
-```json id="ghm0wt"
-"Email sent successfully"
-```
-
-### Falha SMTP
-
-```json id="fgl3k6"
-{
-  "status": 502,
-  "message": "Failed to send email: Invalid SMTP credentials"
-}
-```
-
 ---
 
-# 🧪 Exemplos cURL
+## Exemplos cURL
 
-## Health Check
-
-```bash id="h25xv9"
+```bash
+# Health Check
 curl -X GET http://localhost:8000/health-check
-```
 
----
-
-## Criar Notificação
-
-```bash id="oz2jcb"
+# Criar Notificação
 curl -X POST http://localhost:8000/notification/consume \
--H "Content-Type: application/json" \
--d '{
-  "userID":"10",
-  "userEmail":"user@email.com",
-  "msgString":"Mensagem",
-  "dateTime":"2026-06-16T10:00:00Z"
-}'
-```
+  -H "Content-Type: application/json" \
+  -d '{"userID":"10","userEmail":"user@email.com","msgString":"Mensagem","dateTime":"2026-06-16T10:00:00Z"}'
 
----
-
-## Buscar Notificação
-
-```bash id="up9hdk"
+# Buscar Notificação
 curl -X GET http://localhost:8000/notification/{id}
-```
 
----
-
-## Enviar E-mail
-
-```bash id="e6yh9i"
+# Enviar E-mail
 curl -X POST http://localhost:8000/notification/send-email/{id}
 ```
 
 ---
 
-# 🛡 Tratamento de Erros
+## Tratamento de Erros
 
 | HTTP | Situação                   |
-| ---- | -------------------------- |
+|------|----------------------------|
 | 400  | Dados inválidos            |
 | 404  | Notificação não encontrada |
 | 409  | E-mail já enviado          |
@@ -436,7 +308,7 @@ curl -X POST http://localhost:8000/notification/send-email/{id}
 
 Formato padrão:
 
-```json id="5ow4gr"
+```json
 {
   "timestamp": "2026-06-22T12:44:18",
   "status": 502,
@@ -447,64 +319,47 @@ Formato padrão:
 
 ---
 
-# 🐳 Build e Containerização
+## Testes
 
-## Gerar JAR
-
-```bash id="0h1vdf"
-mvn clean package
-```
-
----
-
-## Executar JAR
-
-```bash id="v2ajkv"
-java -jar target/notification-service.jar
-```
-
----
-
-## Construir Docker
-
-```bash id="o5l5ic"
-docker build -t notification-service .
-```
-
----
-
-## Executar Container
-
-```bash id="vuhmh8"
-docker run -p 8000:8000 notification-service
-```
-
----
-
-# ✅ Testes
-
-Executar todos os testes:
-
-```bash id="k4zplx"
+```bash
 mvn test
 ```
 
-Principais cenários cobertos:
+### Cenários cobertos (NotificationServiceTest)
 
-* Persistência de notificações
-* Consulta por ID
-* Publicação Kafka
-* Consumo de confirmação
-* Tratamento de erros
-* Idempotência de envio
+| Teste | Descrição |
+|-------|-----------|
+| `deveCriarNotificacao` | Cria notificação e persiste no banco |
+| `deveBuscarNotificacaoPorId` | Busca notificação existente por ID |
+| `deveLancarExcecaoQuandoNotificacaoNaoEncontrada` | Retorna erro para ID inexistente |
+| `deveLancarExcecaoQuandoIdNuloNoBuscar` | Retorna erro para ID nulo |
+| `deveEnviarEmailComSucesso` | Publica no Kafka e aguarda confirmação de envio |
+| `deveLancarExcecaoAoEnviarEmailComIdNulo` | Retorna erro ao tentar enviar com ID nulo |
+
+### Dependências de teste
+
+- **JUnit 5** (via `spring-boot-starter-test`)
+- **Mockito** para mock de `NotificationJpaRepository` e `KafkaTemplate`
 
 ---
 
-# 🔒 Segurança e Boas Práticas
+## Observabilidade
 
-* IDs gerados exclusivamente pelo backend
+O serviço possui um **interceptor de requisições HTTP** (`RequestLoggingInterceptor`) que envia automaticamente logs de todas as requisições para o serviço de Observabilidade.
+
+- Requisições com status `>= 400` são registradas como `ERROR`
+- Requisições com status `< 400` são registradas como `INFO`
+- Exceções não tratadas são capturadas e logadas como `ERROR`
+- Endpoint de destino: `POST http://localhost:8090/observabilidade/logs`
+- Endpoints excluídos: `/actuator/**` e `/health-check`
+
+---
+
+## Segurança e Boas Práticas
+
+* IDs gerados exclusivamente pelo backend (UUID)
 * Bean Validation em todas as entradas
-* Tratamento centralizado de exceções
+* Tratamento centralizado de exceções via `GlobalExceptionHandler`
 * Cache somente após persistência bem-sucedida
 * Idempotência garantida para envios
 * Confirmação real antes de retornar sucesso
@@ -512,12 +367,12 @@ Principais cenários cobertos:
 
 ---
 
-# 🔮 Melhorias Futuras
+## Melhorias Futuras
 
 * JWT Authentication
 * OpenAPI / Swagger
-* Templates HTML
-* Retry automático
+* Templates HTML para e-mails
+* Retry automático com backoff
 * Dead Letter Queue (DLQ)
 * Prometheus + Micrometer
 * Dashboard administrativo
@@ -525,12 +380,4 @@ Principais cenários cobertos:
 
 ---
 
-# 📄 Licença
-
 Projeto desenvolvido para fins acadêmicos e educacionais como parte do ecossistema **CineLeo**.
-
----
-
-## 👨‍💻 Desenvolvido para o Ecossistema CineLeo
-
-Notifications • Kafka • PostgreSQL • Spring Boot • Event Driven Architecture • Java 21

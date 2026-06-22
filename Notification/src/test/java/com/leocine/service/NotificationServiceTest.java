@@ -10,18 +10,24 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.kafka.core.KafkaTemplate;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class NotificationServiceTest {
 
     @Mock
     private NotificationJpaRepository notificationRepository;
+
+    @Mock
+    private KafkaTemplate<String, NotificationMessage> kafkaTemplate;
 
     @InjectMocks
     private NotificationService notificationService;
@@ -96,6 +102,16 @@ class NotificationServiceTest {
 
         when(notificationRepository.findById("abc-123")).thenReturn(Optional.of(entity));
         when(notificationRepository.save(any())).thenReturn(entity);
+        when(kafkaTemplate.send(eq("notification.email.send"), any(NotificationMessage.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+
+        // Simula confirmação do Kafka em outra thread
+        new Thread(() -> {
+            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+            org.apache.kafka.clients.consumer.ConsumerRecord<String, String> record =
+                    new org.apache.kafka.clients.consumer.ConsumerRecord<>("notification.email.sent", 0, 0, "abc-123", "SENT");
+            notificationService.handleEmailSentConfirmation(record);
+        }).start();
 
         notificationService.sendEmailById("abc-123");
 
