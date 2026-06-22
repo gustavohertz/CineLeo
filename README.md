@@ -1,8 +1,8 @@
 # 🎬 CineLeo - Ecossistema de Microsserviços
 
-Plataforma completa de gerenciamento de cinema desenvolvida com **Java 21**, **Spring Boot 3**, **Spring Cloud Netflix Eureka**, **Apache Kafka** e **PostgreSQL**.
+Plataforma completa de gerenciamento de cinema desenvolvida com **Java 17+**, **Spring Boot 3**, **Spring Cloud Gateway**, **Spring Cloud Netflix Eureka**, **Apache Kafka** e **PostgreSQL**.
 
-O ecossistema gerencia usuários, filmes, salas, sessões, reservas, pagamentos e notificações, utilizando arquitetura baseada em microsserviços, comunicação assíncrona por eventos e observabilidade centralizada.
+O ecossistema gerencia usuários, filmes, salas, sessões, reservas, pagamentos e notificações, utilizando arquitetura baseada em microsserviços, API Gateway como ponto de entrada único, comunicação assíncrona por eventos e observabilidade centralizada.
 
 ---
 
@@ -55,52 +55,39 @@ Cada domínio de negócio é isolado em um microsserviço independente, proporci
 # 🏗 Arquitetura do Ecossistema
 
 ```text
-                                         ┌─────────────────┐
-                                         │ Eureka Server   │
-                                         │      :8761      │
-                                         └────────┬────────┘
-                                                  │
-
-          ┌───────────────────────────────────────┼───────────────────────────────────────┐
-          │                                       │                                       │
-          ▼                                       ▼                                       ▼
-
- ┌────────────────┐                    ┌──────────────────┐                    ┌──────────────────┐
- │ Usuarios       │                    │ Eventos          │                    │ Observabilidade  │
- │ :8083          │                    │ :8082            │                    │ :8090            │
- └──────┬─────────┘                    └────────┬─────────┘                    └──────────────────┘
-        │                                       │
-        │                                       │
-        ▼                                       ▼
-
- ┌────────────────┐                    ┌──────────────────┐
- │ JWT / RSA      │                    │ Pagamento        │
- └────────────────┘                    │ :5000            │
-                                       └────────┬─────────┘
-                                                │
-
-                                                ▼
-
-                                      ┌──────────────────┐
-                                      │ Apache Kafka     │
-                                      │ :9092            │
-                                      └────────┬─────────┘
-                                               │
-
-                            ┌──────────────────┼──────────────────┐
-                            │                                     │
-                            ▼                                     ▼
-
-                  ┌──────────────────┐               ┌──────────────────┐
-                  │ Notification     │               │ Microservices    │
-                  │ :8000            │               │ Kafka :8081      │
-                  └──────────────────┘               └────────┬─────────┘
-                                                              │
-                                                              ▼
-
-                                                      ┌──────────────┐
-                                                      │ SMTP Server  │
-                                                      └──────────────┘
+                            Cliente (CLI / Browser / Postman)
+                                          │
+                                          ▼
+                                 ┌─────────────────┐
+                                 │  API Gateway    │
+                                 │     :9999       │
+                                 └────────┬────────┘
+                                          │
+                                 ┌────────┴────────┐
+                                 │ Eureka Server   │
+                                 │      :8761      │
+                                 └────────┬────────┘
+                                          │
+       ┌──────────┬──────────┬────────────┼────────────┬──────────┬──────────┐
+       │          │          │            │            │          │          │
+       ▼          ▼          ▼            ▼            ▼          ▼          ▼
+  ┌─────────┐ ┌────────┐ ┌─────────┐ ┌─────────┐ ┌────────┐ ┌──────────┐
+  │Eventos  │ │Usuarios│ │Pagamento│ │Notific. │ │ Kafka  │ │Observab. │
+  │ :8082   │ │ :8083  │ │ :5000   │ │ :8000   │ │ :8081  │ │  :8090   │
+  └────┬────┘ └───┬────┘ └────┬────┘ └─────────┘ └───┬────┘ └──────────┘
+       │          │           │                       │
+       │          ▼           │                       ▼
+       │    ┌──────────┐      │                ┌──────────────┐
+       │    │ JWT/RSA  │      │                │ SMTP Server  │
+       │    └──────────┘      │                └──────────────┘
+       │                      │
+       └──────────────────────┘
+                  │
+                  ▼
+         ┌──────────────────┐
+         │  Apache Kafka    │
+         │     :9092        │
+         └──────────────────┘
 ```
 
 ---
@@ -109,6 +96,7 @@ Cada domínio de negócio é isolado em um microsserviço independente, proporci
 
 | Serviço              | Porta | Responsabilidade                                       |
 | -------------------- | ----- | ------------------------------------------------------ |
+| API Gateway          | 9999  | Ponto de entrada único, roteamento e balanceamento     |
 | Eureka Server        | 8761  | Registro e descoberta de serviços                      |
 | Observabilidade      | 8090  | Monitoramento e centralização de logs                  |
 | Usuarios Service     | 8083  | Cadastro, autenticação JWT e gerenciamento de usuários |
@@ -123,9 +111,10 @@ Cada domínio de negócio é isolado em um microsserviço independente, proporci
 
 | Tecnologia                  | Versão          |
 | --------------------------- | --------------- |
-| Java                        | 21              |
-| Spring Boot                 | 3.4.x / 3.5.x   |
-| Spring Cloud Netflix Eureka | 2024.x / 2025.x |
+| Java                        | 17+             |
+| Spring Boot                 | 3.4.x           |
+| Spring Cloud Gateway MVC    | 2024.0.0        |
+| Spring Cloud Netflix Eureka | 2024.0.0        |
 | Spring Kafka                | Latest          |
 | Spring Data JPA             | Latest          |
 | Spring Security             | Latest          |
@@ -144,7 +133,7 @@ Cada domínio de negócio é isolado em um microsserviço independente, proporci
 
 Antes de executar o ambiente:
 
-* JDK 21
+* JDK 17+
 * Maven 3.8+
 * Docker Desktop
 * Docker Compose
@@ -186,6 +175,8 @@ http://localhost:8761
 ## 3. Iniciar Microsserviços
 
 ```bash
+cd Gateway && mvn spring-boot:run
+
 cd Observabilidade && mvn spring-boot:run
 
 cd Kafka && mvn spring-boot:run
@@ -203,6 +194,8 @@ cd Eventos && mvn spring-boot:run
 
 ```text
 Eureka
+   ↓
+API Gateway
    ↓
 Kafka + Bancos
    ↓
@@ -229,6 +222,9 @@ Eventos
 Cliente
    │
    ▼
+API Gateway (:9999)
+   │  /api/usuarios/**
+   ▼
 
 Usuarios Service
    │
@@ -244,6 +240,9 @@ JWT RSA-256
 ```text
 Cliente
    │
+   ▼
+API Gateway (:9999)
+   │  /api/eventos/**
    ▼
 
 Eventos Service
@@ -262,6 +261,9 @@ Sessões
 ```text
 Cliente
    │
+   ▼
+API Gateway (:9999)
+   │  /api/eventos/**
    ▼
 
 Eventos Service
@@ -326,6 +328,30 @@ notification.email.sent
 ---
 
 # 🌐 Endpoints Consolidados
+
+> Todos os endpoints dos microsserviços podem ser acessados via **API Gateway** na porta `9999`.
+> Exemplo: `GET /api/eventos/filmes` no Gateway é roteado para `GET /filmes` no Eventos Service.
+
+## API Gateway (:9999)
+
+| Método | Endpoint              | Descrição                       |
+| ------ | --------------------- | ------------------------------- |
+| GET    | `/actuator/health`    | Verificação de saúde do Gateway |
+| GET    | `/actuator/info`      | Informações da aplicação        |
+| GET    | `/actuator/gateway`   | Rotas configuradas              |
+
+### Rotas de Roteamento
+
+| Prefixo no Gateway           | Serviço de Destino       |
+| ---------------------------- | ------------------------ |
+| `/api/eventos/**`            | Eventos Service (:8082)  |
+| `/api/usuarios/**`           | Usuarios Service (:8083) |
+| `/api/pagamentos/**`         | Pagamento Service (:5000)|
+| `/api/notificacoes/**`       | Notification Service (:8000) |
+| `/api/kafka/**`              | Microservices Kafka (:8081)  |
+| `/api/observabilidade/**`    | Observabilidade (:8090)  |
+
+---
 
 ## Eventos Service (:8082)
 
@@ -478,7 +504,6 @@ Cobertura principal:
 
 # 🔮 Melhorias Futuras
 
-* API Gateway com Spring Cloud Gateway
 * OAuth2 / OpenID Connect
 * Prometheus + Grafana
 * OpenAPI / Swagger
@@ -499,4 +524,4 @@ Projeto desenvolvido para fins acadêmicos e educacionais como parte do ecossist
 
 ## 👨‍💻 Desenvolvido para o Ecossistema CineLeo
 
-Microservices • Spring Boot • Apache Kafka • PostgreSQL • Eureka Discovery • Java 21
+Microservices • Spring Cloud Gateway • Spring Boot • Apache Kafka • PostgreSQL • Eureka Discovery • Java 17+
