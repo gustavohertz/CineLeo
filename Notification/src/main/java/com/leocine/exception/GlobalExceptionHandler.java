@@ -24,6 +24,8 @@ public class GlobalExceptionHandler {
             status = HttpStatus.CONFLICT;
         } else if (message.contains("required") || message.contains("Invalid")) {
             status = HttpStatus.BAD_REQUEST;
+        } else if (message.contains("Failed to queue email")) {
+            status = HttpStatus.BAD_GATEWAY;
         }
 
         return buildErrorResponse(status, message);
