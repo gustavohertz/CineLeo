@@ -1,0 +1,94 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            - id: eventos-service
+              uri: lb://EVENTOS-SERVICE
+              predicates:
+                - Path=/api/eventos/**
+              filters:
+                - StripPrefix=2
+
+            - id: usuarios-service
+              uri: lb://USUARIOS-SERVICE
+              predicates:
+                - Path=/api/usuarios/**
+              filters:
+                - StripPrefix=2
+
+            - id: pagamento-service
+              uri: lb://PAYMENTSERVICE
+              predicates:
+                - Path=/api/pagamentos/**
+              filters:
+                - StripPrefix=2
+
+            - id: notification-service
+              uri: lb://NOTIFICATION-SERVICE
+              predicates:
+                - Path=/api/notificacoes/**
+              filters:
+                - StripPrefix=2
+
+            - id: kafka-service
+              uri: lb://MICROSERVICESKAFKA
+              predicates:
+                - Path=/api/kafka/**
+              filters:
+                - StripPrefix=2
+
+            - id: observabilidade-service
+              uri: lb://OBSERVABILIDADE-SERVICE
+              predicates:
+                - Path=/api/observabilidade/**
+              filters:
+                - StripPrefix=2
+
+  eureka:
+    client:
+      service-url:
+        defaultZone: http://localhost:8761/eureka/
+
+server:
+  port: 9999
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: w3c
+  otlp:
+    metrics:
+      export:
+        enabled: false
+  opentelemetry:
+    resource-attributes:
+      service.name: ${spring.application.name}
+      service.namespace: cineleo
+      deployment.environment: local
+    tracing:
+      export:
+        otlp:
+          endpoint: http://localhost:4318/v1/traces
+          protocol: http/protobuf
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] [${spring.application.name}, traceId=%X{traceId:-}, spanId=%X{spanId:-}] %logger{36} - %msg%n"
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.web.client.RestClient: DEBUG
+    org.springframework.web.servlet.function: DEBUG
+    io.micrometer.tracing: DEBUG
+    io.opentelemetry: INFO
