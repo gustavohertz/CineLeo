@@ -35,14 +35,7 @@ public class PagamentoClient {
     public String processarPagamento(String customerId, Double valor, String descricao, CartaoDTO cartao) {
         try {
             PagamentoRequest request = new PagamentoRequest(
-                    customerId, "CREDIT_CARD", valor, descricao,
-                    new PagamentoRequest.CardDTO(
-                            cartao.getNumero(),
-                            cartao.getNomeTitular(),
-                            cartao.getMesExpiracao(),
-                            cartao.getAnoExpiracao(),
-                            cartao.getCvv()
-                    )
+                    customerId, "CREDIT_CARD", valor, descricao
             );
             PagamentoResponse response = restTemplate.postForObject(
                     pagamentoUrl + "/payments/card", request, PagamentoResponse.class);
@@ -94,16 +87,6 @@ public class PagamentoClient {
         private final String billingType;
         private final Double value;
         private final String description;
-        private final CardDTO card;
-
-        @Data
-        static class CardDTO {
-            private final String number;
-            private final String holderName;
-            private final String expiryMonth;
-            private final String expiryYear;
-            private final String ccv;
-        }
     }
 
     @Data

@@ -4,6 +4,8 @@ import com.cineleo.dto.PaymentCardRequestDTO;
 import com.cineleo.dto.PaymentResponseDTO;
 import com.cineleo.exception.PaymentProcessingException;
 import com.cineleo.repository.AsaasConnection;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -14,6 +16,8 @@ import java.util.Set;
 
 @Service
 public class PaymentService {
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
     private final AsaasConnection asaasConnection;
     private final NotificationClientService notificationClientService;
@@ -65,15 +69,20 @@ public class PaymentService {
             String paymentId = (String) response.get("id");
             String mappedStatus = APPROVED_STATUSES.contains(status) ? "aprovado" : "rejeitado";
 
-            String mensagem = String.format(
-                    "Pagamento processado: id=%s, status=%s, valor=%.2f, descrição=%s",
-                    paymentId, mappedStatus, request.value(),
-                    request.description() != null ? request.description() : "");
-            notificationClientService.createAndSendEmail(
-                    request.customerId(),
-                    HOLDER_EMAIL,
-                    mensagem,
-                    OffsetDateTime.now());
+            // Notificação (não bloqueante)
+            try {
+                String mensagem = String.format(
+                        "Pagamento processado: id=%s, status=%s, valor=%.2f, descrição=%s",
+                        paymentId, mappedStatus, request.value(),
+                        request.description() != null ? request.description() : "");
+                notificationClientService.createAndSendEmail(
+                        request.customerId(),
+                        HOLDER_EMAIL,
+                        mensagem,
+                        OffsetDateTime.now());
+            } catch (Exception e) {
+                log.error("Falha ao notificar: {}", e.getMessage());
+            }
 
             return new PaymentResponseDTO(mappedStatus, paymentId);
         } catch (Exception e) {
