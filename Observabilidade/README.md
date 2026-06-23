@@ -93,7 +93,6 @@ src/
     │
     ├── controller/
     │   ├── DashboardController.java
-    │   ├── HealthCheckController.java
     │   └── LogController.java
     │
     ├── service/
@@ -112,7 +111,8 @@ src/main/resources/
 └── application.properties
 
 pom.xml
-Dockerfile
+docker-compose.yml
+prometheus.yml
 ```
 
 ---
@@ -120,15 +120,15 @@ Dockerfile
 # 🚀 Tecnologias Utilizadas
 
 | Tecnologia                  | Versão   |
-| --------------------------- | -------- |
+|-----------------------------|----------|
 | Java                        | 21       |
 | Spring Boot                 | 3.5.3    |
 | Spring Cloud Netflix Eureka | 2025.0.0 |
 | Spring Boot Actuator        | Latest   |
 | Lombok                      | Latest   |
 | Maven                       | 3.8+     |
-| Docker                      | Opcional |
-
+| docker-compose              | 3.8      |
+| prometheus                  | ..    
 ---
 
 # 📋 Pré-requisitos
@@ -161,6 +161,10 @@ server.port=8090
 eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
 eureka.client.restclient.enabled=true
 
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
+management.endpoint.health.show-details=always
+management.metrics.tags.application=${spring.application.name}
+
 management.endpoints.web.exposure.include=health,info,metrics
 management.endpoint.health.show-details=always
 
@@ -186,6 +190,14 @@ Certifique-se de que o Eureka Server esteja disponível:
 
 ```bash
 docker compose up -d eureka-server
+```
+## Inicializar o docker-compose da aplicação
+
+```bash
+cd Observabilidade
+```
+```bash
+docker compose up -d
 ```
 
 ## Executar Aplicação
