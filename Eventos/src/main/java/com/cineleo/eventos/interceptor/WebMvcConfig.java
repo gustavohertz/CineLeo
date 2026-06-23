@@ -1,6 +1,7 @@
 package com.cineleo.eventos.interceptor;
 
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -9,7 +10,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final RequestLoggingInterceptor requestLoggingInterceptor;
 
-    public WebMvcConfig(RequestLoggingInterceptor requestLoggingInterceptor) {
+    public WebMvcConfig(@Lazy RequestLoggingInterceptor requestLoggingInterceptor) {
         this.requestLoggingInterceptor = requestLoggingInterceptor;
     }
 
