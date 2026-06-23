@@ -3,9 +3,8 @@ spring:
     name: api-gateway
   cloud:
     gateway:
-      server:
-        webmvc:
-          routes:
+      mvc:
+        routes:
             - id: eventos-service
               uri: lb://EVENTOS-SERVICE
               predicates:
