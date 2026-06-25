@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.kafka.core.KafkaTemplate;
 import com.cineleo.eventos.dto.PagamentoEvento;
+import io.micrometer.core.instrument.MeterRegistry;
+import jakarta.annotation.PostConstruct;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -31,6 +33,20 @@ public class ReservaService {
     private final UsuarioClient usuarioClient;
     private final PagamentoClient pagamentoClient;
     private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final MeterRegistry meterRegistry;
+
+    // Pré-registra todas as séries em 0, para os painéis do Grafana mostrarem
+    // "0" desde o início em vez de "No data" antes do primeiro evento.
+    @PostConstruct
+    void initMetrics() {
+        meterRegistry.counter("cineleo.reservas.criadas", "result", "criada", "motivo", "ok");
+        meterRegistry.counter("cineleo.reservas.criadas", "result", "rejeitada", "motivo", "usuario_inativo");
+        meterRegistry.counter("cineleo.reservas.criadas", "result", "rejeitada", "motivo", "sessao_indisponivel");
+        meterRegistry.counter("cineleo.reservas.criadas", "result", "rejeitada", "motivo", "sem_assentos");
+        meterRegistry.counter("cineleo.reservas.pagamento", "result", "aprovado");
+        meterRegistry.counter("cineleo.reservas.pagamento", "result", "recusado");
+        meterRegistry.counter("cineleo.reservas.canceladas");
+    }
 
     @Transactional(readOnly = true)
     public List<ReservaResponseDTO> listarPorSessao(Long sessaoId) {
@@ -65,6 +81,7 @@ public class ReservaService {
         // Valida usuário no serviço de Usuários
         UsuarioClient.UsuarioDTO usuario = usuarioClient.buscarPorId(dto.getUsuarioId());
         if ("INATIVO".equals(usuario.getStatus())) {
+            meterRegistry.counter("cineleo.reservas.criadas", "result", "rejeitada", "motivo", "usuario_inativo").increment();
             throw new BusinessException("Usuário inativo não pode realizar reservas");
         }
 
@@ -72,9 +89,11 @@ public class ReservaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Sessão não encontrada com id: " + dto.getSessaoId()));
 
         if (sessao.getStatus() != Sessao.StatusSessao.AGENDADA) {
+            meterRegistry.counter("cineleo.reservas.criadas", "result", "rejeitada", "motivo", "sessao_indisponivel").increment();
             throw new BusinessException("Reservas só podem ser feitas para sessões com status AGENDADA");
         }
         if (sessao.getAssentosDisponiveis() < dto.getQuantidadeIngressos()) {
+            meterRegistry.counter("cineleo.reservas.criadas", "result", "rejeitada", "motivo", "sem_assentos").increment();
             throw new BusinessException("Assentos insuficientes. Disponíveis: " + sessao.getAssentosDisponiveis());
         }
 
@@ -82,6 +101,8 @@ public class ReservaService {
 
         sessao.setAssentosDisponiveis(sessao.getAssentosDisponiveis() - dto.getQuantidadeIngressos());
         sessaoRepository.save(sessao);
+
+        meterRegistry.counter("cineleo.reservas.criadas", "result", "criada", "motivo", "ok").increment();
 
         Reserva reserva = Reserva.builder()
                 .sessao(sessao)
@@ -140,6 +161,7 @@ public class ReservaService {
                 "APROVADO", null, pagamentoId
             );
             kafkaTemplate.send("cinema.pagamento.aprovado", evento);
+            meterRegistry.counter("cineleo.reservas.pagamento", "result", "aprovado").increment();
         } else {
             reserva.setStatus(Reserva.StatusReserva.PAGAMENTO_RECUSADO);
             Sessao sessao = reserva.getSessao();
@@ -150,6 +172,7 @@ public class ReservaService {
                 "RECUSADO", "O cartão foi recusado pelo banco.", pagamentoId
             );
             kafkaTemplate.send("cinema.pagamento.recusado", evento);
+            meterRegistry.counter("cineleo.reservas.pagamento", "result", "recusado").increment();
         }
 
         return ReservaResponseDTO.from(reservaRepository.save(reserva));
@@ -172,6 +195,7 @@ public class ReservaService {
         sessaoRepository.save(sessao);
 
         reserva.setStatus(Reserva.StatusReserva.CANCELADA);
+        meterRegistry.counter("cineleo.reservas.canceladas").increment();
         return ReservaResponseDTO.from(reservaRepository.save(reserva));
     }
 
