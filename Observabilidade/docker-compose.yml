@@ -13,5 +13,41 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  # Backend de traces: recebe OTLP dos microsserviços e armazena os spans.
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: cineleo-tempo
+    restart: unless-stopped
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+      - tempo_data:/var/tempo
+    ports:
+      - "3200:3200"   # API de consulta do Tempo
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP (endpoint usado pelos serviços)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # UI para visualizar os traces (e métricas do Prometheus).
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cineleo-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - tempo
+      - prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   prometheus_data: {}
+  tempo_data: {}

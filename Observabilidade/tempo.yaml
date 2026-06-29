@@ -1,0 +1,21 @@
+# Configuração mínima do Grafana Tempo para ambiente local (single binary).
+# ingester/compactor usam defaults — não precisam ser declarados.
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        http:        # escuta OTLP/HTTP na 4318
+        grpc:        # escuta OTLP/gRPC na 4317
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
