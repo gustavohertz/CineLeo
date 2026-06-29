@@ -10,7 +10,7 @@ scrape_configs:
   - job_name: 'usuarios-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8081']
+      - targets: ['host.docker.internal:8083']
 
   - job_name: 'eventos-service'
     metrics_path: '/actuator/prometheus'
@@ -20,7 +20,7 @@ scrape_configs:
   - job_name: 'payment-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
-      - targets: ['host.docker.internal:8083']
+      - targets: ['host.docker.internal:5000']
 
   - job_name: 'notification-service'
     metrics_path: '/actuator/prometheus'
