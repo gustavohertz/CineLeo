@@ -1,5 +1,9 @@
 HELP.md
 target/
+
+### Logs de aplicação (coletados pelo nxlog -> Papertrail) ###
+logs/
+**/logs/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

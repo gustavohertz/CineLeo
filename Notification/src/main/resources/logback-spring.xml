@@ -9,24 +9,23 @@
     <springProperty scope="context" name="APP_NAME"
                     source="spring.application.name" defaultValue="unknown-service"/>
 
-    <!-- Envia os logs para o Papertrail via syslog sobre TLS.
-         Configure o destino da SUA conta nas variáveis de ambiente
-         PAPERTRAIL_HOST e PAPERTRAIL_PORT (ex.: logs6.papertrailapp.com / 12345). -->
-    <appender name="PAPERTRAIL" class="com.papertrailapp.logback.Syslog4jAppender">
-        <layout class="ch.qos.logback.classic.PatternLayout">
+    <!-- Grava os logs em arquivo (com traceId/spanId) para o agente nxlog
+         coletar e enviar ao SolarWinds Papertrail. O diretório é configurável
+         pela variável de ambiente LOG_DIR (default: ./logs). -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR:-logs}/${APP_NAME}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR:-logs}/${APP_NAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
             <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} ${APP_NAME} [%X{traceId:-},%X{spanId:-}] %-5level %logger{36} - %msg%n%xException</pattern>
-        </layout>
-        <syslogConfig class="org.productivity.java.syslog4j.impl.net.tcp.ssl.SSLTCPNetSyslogConfig">
-            <host>${PAPERTRAIL_HOST:-logsN.papertrailapp.com}</host>
-            <port>${PAPERTRAIL_PORT:-00000}</port>
-            <ident>${APP_NAME}</ident>
-            <maxMessageLength>128000</maxMessageLength>
-        </syslogConfig>
+        </encoder>
     </appender>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="PAPERTRAIL"/>
+        <appender-ref ref="FILE"/>
     </root>
 
 </configuration>
