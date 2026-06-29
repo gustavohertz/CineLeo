@@ -2,11 +2,16 @@ package com.cineleo.eventos.cli;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Scanner;
 
+// Terminal interativo desativado por padrão: um microsserviço de negócio não deve
+// abrir um console bloqueante no boot (quebra em execução headless/containers).
+// Para usar o menu via linha de comando, suba com: -Dcineleo.cli.enabled=true
 @Component
+@ConditionalOnProperty(name = "cineleo.cli.enabled", havingValue = "true")
 @RequiredArgsConstructor
 public class MenuInterativoRunner implements CommandLineRunner {
 
