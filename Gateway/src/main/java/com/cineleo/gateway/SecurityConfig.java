@@ -31,9 +31,10 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/**", "/fallback/**").permitAll()
                         // login e cadastro precisam ser públicos (é onde se obtém o token)
                         .requestMatchers(HttpMethod.POST, "/api/usuarios/login", "/api/usuarios/create").permitAll()
-                        // catálogo é consulta pública (consistente com a política do Eventos)
+                        // catálogo e recomendações são consultas públicas
                         .requestMatchers(HttpMethod.GET,
-                                "/api/eventos/filmes/**", "/api/eventos/salas/**", "/api/eventos/sessoes/**").permitAll()
+                                "/api/eventos/filmes/**", "/api/eventos/salas/**", "/api/eventos/sessoes/**",
+                                "/api/recomendacoes/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();

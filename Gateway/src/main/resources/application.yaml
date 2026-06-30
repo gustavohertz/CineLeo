@@ -21,6 +21,17 @@ spring:
                     id: eventosCb
                     fallbackUri: forward:/fallback/eventos
 
+            - id: recomendacao-service
+              uri: lb://RECOMENDACAO-SERVICE
+              predicates:
+                - Path=/api/recomendacoes/**
+              filters:
+                - StripPrefix=2
+                - name: CircuitBreaker
+                  args:
+                    id: recomendacaoCb
+                    fallbackUri: forward:/fallback/recomendacoes
+
             - id: usuarios-service
               uri: lb://USUARIOS-SERVICE
               predicates:
