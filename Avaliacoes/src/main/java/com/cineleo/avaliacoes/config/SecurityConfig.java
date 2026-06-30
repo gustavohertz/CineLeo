@@ -18,18 +18,6 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.jwks-uri}")
     private String jwksUri;
 
-    /**
-     * Define o JwtDecoder manualmente com NimbusJwtDecoder.
-     *
-     * Por que isso e necessario?
-     * A configuracao automatica do Spring tenta buscar as chaves publicas RSA
-     * do Usuarios Service (jwks-uri) no momento em que a aplicacao sobe.
-     * Se o Usuarios Service nao estiver no ar, a aplicacao falha ao iniciar.
-     *
-     * Com NimbusJwtDecoder.withJwkSetUri().build(), a conexao so acontece
-     * na PRIMEIRA requisicao que chega com um JWT — nao na inicializacao.
-     * Isso e chamado de inicializacao "lazy" (preguicosa).
-     */
     @Bean
     public JwtDecoder jwtDecoder() {
         return NimbusJwtDecoder.withJwkSetUri(jwksUri).build();

@@ -40,7 +40,6 @@ public class Avaliacao {
     @Builder.Default
     private Integer curtidas = 0;
 
-    // Armazena os IDs de quem curtiu para garantir idempotencia (um like por usuario)
     @Builder.Default
     private List<String> curtidores = new ArrayList<>();
 
