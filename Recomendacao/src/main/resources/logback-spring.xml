@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- Mantém o CONSOLE e os conversores padrão do Spring Boot
+         (respeita logging.pattern.console e logging.level.* das properties). -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <springProperty scope="context" name="APP_NAME"
+                    source="spring.application.name" defaultValue="unknown-service"/>
+
+    <!-- Grava os logs em arquivo (com traceId/spanId) para o agente nxlog
+         coletar e enviar ao SolarWinds Papertrail. O diretório é configurável
+         pela variável de ambiente LOG_DIR (default: ./logs). -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR:-logs}/${APP_NAME}.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR:-logs}/${APP_NAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} ${APP_NAME} [%X{traceId:-},%X{spanId:-}] %-5level %logger{36} - %msg%n%xException</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+</configuration>
