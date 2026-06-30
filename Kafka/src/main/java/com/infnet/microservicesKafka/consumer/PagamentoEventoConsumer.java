@@ -5,6 +5,9 @@ import com.infnet.microservicesKafka.dto.PagamentoEvento;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.retrytopic.DltStrategy;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 
 import java.time.OffsetDateTime;
@@ -21,6 +24,12 @@ public class PagamentoEventoConsumer {
         this.notificationClient = notificationClient;
     }
 
+    @RetryableTopic(
+            attempts = "5",
+            backoff = @Backoff(delay = 2000, multiplier = 1.5),
+            dltStrategy = DltStrategy.FAIL_ON_ERROR
+    )
+
     @KafkaListener(topics = "cinema.pagamento.aprovado", groupId = "cineleo-notificacoes")
     public void handlePagamentoAprovado(PagamentoEvento evento) {
         log.info("Recebido evento de pagamento APROVADO: reserva={}, email={}", evento.idReserva(), evento.emailUsuario());
@@ -36,6 +45,12 @@ public class PagamentoEventoConsumer {
                 OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
         );
     }
+
+    @RetryableTopic(
+            attempts = "5",
+            backoff = @Backoff(delay = 2000, multiplier = 1.5),
+            dltStrategy = DltStrategy.FAIL_ON_ERROR
+    )
 
     @KafkaListener(topics = "cinema.pagamento.recusado", groupId = "cineleo-notificacoes")
     public void handlePagamentoRecusado(PagamentoEvento evento) {
