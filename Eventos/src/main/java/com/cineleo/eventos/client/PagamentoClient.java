@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
+
 @Component
 @RequiredArgsConstructor
 public class PagamentoClient {
@@ -32,7 +34,7 @@ public class PagamentoClient {
         }
     }
 
-    public String processarPagamento(String customerId, Double valor, String descricao, CartaoDTO cartao) {
+    public String processarPagamento(String customerId, BigDecimal valor, String descricao, CartaoDTO cartao) {
         try {
             PagamentoRequest request = new PagamentoRequest(
                     customerId, "CREDIT_CARD", valor, descricao
@@ -85,7 +87,7 @@ public class PagamentoClient {
     static class PagamentoRequest {
         private final String customerId;
         private final String billingType;
-        private final Double value;
+        private final BigDecimal value;
         private final String description;
     }
 

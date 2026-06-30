@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.kafka.core.KafkaTemplate;
-import com.cineleo.eventos.dto.PagamentoEvento;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 
@@ -32,7 +31,7 @@ public class ReservaService {
     private final SessaoRepository sessaoRepository;
     private final UsuarioClient usuarioClient;
     private final PagamentoClient pagamentoClient;
-    private final KafkaTemplate<String, Object> kafkaTemplate;
+    private final KafkaTemplate<String, PagamentoEvento> kafkaTemplate;
     private final MeterRegistry meterRegistry;
 
     // Pré-registra todas as séries em 0, para os painéis do Grafana mostrarem
@@ -145,7 +144,7 @@ public class ReservaService {
 
         String pagamentoId = pagamentoClient.processarPagamento(
                 customerId,
-                reserva.getValorTotal().doubleValue(),
+                reserva.getValorTotal(),
                 descricao,
                 cartao
         );
