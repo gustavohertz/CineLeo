@@ -1,0 +1,35 @@
+services:
+  avaliacoes-mongodb:
+    image: mongo:7-jammy
+    container_name: cineleo-avaliacoes-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root_pass
+      MONGO_INITDB_DATABASE: avaliacoes_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - avaliacoes_mongo_data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  avaliacoes-redis:
+    image: redis:7-alpine
+    container_name: cineleo-avaliacoes-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  avaliacoes_mongo_data:
+    driver: local
