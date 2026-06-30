@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -17,8 +19,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UsuarioClient {
 
+    private static final Logger log = LoggerFactory.getLogger(UsuarioClient.class);
+
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Value("${services.usuarios.url}")
     private String usuariosUrl;
@@ -119,7 +123,9 @@ public class UsuarioClient {
             if (errorMap.containsKey("mensagem")) {
                 return new BusinessException(errorMap.get("mensagem").toString());
             }
-        } catch (Exception ignored) {}
+        } catch (Exception parseEx) {
+            log.warn("Falha ao interpretar corpo de erro do serviço de usuários: {}", parseEx.getMessage());
+        }
         return new BusinessException("Erro na requisição: " + ex.getMessage());
     }
 }
