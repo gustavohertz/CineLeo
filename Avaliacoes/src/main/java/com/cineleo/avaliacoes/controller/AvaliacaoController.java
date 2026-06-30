@@ -1,6 +1,7 @@
 package com.cineleo.avaliacoes.controller;
 
-import com.cineleo.avaliacoes.dto.*;
+import com.cineleo.avaliacoes.dto.AvaliacaoRequestDTO;
+import com.cineleo.avaliacoes.dto.AvaliacaoResponseDTO;
 import com.cineleo.avaliacoes.service.AvaliacaoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,26 +25,22 @@ public class AvaliacaoController {
             @RequestBody @Valid AvaliacaoRequestDTO dto,
             @AuthenticationPrincipal Jwt jwt) {
 
-        String usuarioId = jwt.getSubject();
+        String usuarioId   = jwt.getSubject();
         String usuarioNome = jwt.getClaimAsString("name");
 
-        return ResponseEntity.status(HttpStatus.CREATED)
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
                 .body(avaliacaoService.criar(dto, usuarioId, usuarioNome));
     }
 
     @GetMapping("/filme/{filmeId}")
-    public ResponseEntity<AvaliacaoListaDTO> listarPorFilme(@PathVariable String filmeId) {
+    public ResponseEntity<List<AvaliacaoResponseDTO>> listarPorFilme(@PathVariable String filmeId) {
         return ResponseEntity.ok(avaliacaoService.listarPorFilme(filmeId));
     }
 
-    @GetMapping("/usuario/{usuarioId}")
-    public ResponseEntity<List<AvaliacaoResponseDTO>> listarPorUsuario(@PathVariable String usuarioId) {
-        return ResponseEntity.ok(avaliacaoService.listarPorUsuario(usuarioId));
-    }
-
-    @GetMapping("/filme/{filmeId}/resumo")
-    public ResponseEntity<AvaliacaoResumoDTO> buscarResumo(@PathVariable String filmeId) {
-        return ResponseEntity.ok(avaliacaoService.buscarResumo(filmeId));
+    @GetMapping("/minha")
+    public ResponseEntity<List<AvaliacaoResponseDTO>> minhasAvaliacoes(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(avaliacaoService.minhasAvaliacoes(jwt.getSubject()));
     }
 
     @PutMapping("/{id}")
@@ -62,22 +59,5 @@ public class AvaliacaoController {
 
         avaliacaoService.remover(id, jwt.getSubject());
         return ResponseEntity.noContent().build();
-    }
-
-    @PutMapping("/{id}/curtir")
-    public ResponseEntity<AvaliacaoResponseDTO> curtir(
-            @PathVariable String id,
-            @AuthenticationPrincipal Jwt jwt) {
-
-        return ResponseEntity.ok(avaliacaoService.curtir(id, jwt.getSubject()));
-    }
-
-    @PostMapping("/{id}/denunciar")
-    public ResponseEntity<Void> denunciar(
-            @PathVariable String id,
-            @AuthenticationPrincipal Jwt jwt) {
-
-        avaliacaoService.denunciar(id, jwt.getSubject());
-        return ResponseEntity.status(HttpStatus.CREATED).build();
     }
 }

@@ -30,7 +30,6 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET, "/avaliacoes/filme/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/avaliacoes/filmes/ranking").permitAll()
                 .requestMatchers("/health-check").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated()
