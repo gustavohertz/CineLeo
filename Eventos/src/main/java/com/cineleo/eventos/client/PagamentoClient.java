@@ -1,8 +1,12 @@
 package com.cineleo.eventos.client;
 
 import com.cineleo.eventos.exception.BusinessException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -13,11 +17,15 @@ import java.math.BigDecimal;
 @RequiredArgsConstructor
 public class PagamentoClient {
 
+    private static final Logger log = LoggerFactory.getLogger(PagamentoClient.class);
+
     private final RestTemplate restTemplate;
 
     @Value("${services.pagamento.url}")
     private String pagamentoUrl;
 
+    // Sem retry: criar cliente não é idempotente (evita duplicar cadastro no gateway).
+    @CircuitBreaker(name = "pagamento", fallbackMethod = "criarCustomerFallback")
     public String criarCustomer(String nome, String email, String cpf) {
         try {
             CustomerRequest request = new CustomerRequest(nome, email, cpf);
@@ -34,6 +42,8 @@ public class PagamentoClient {
         }
     }
 
+    // Sem retry: pagamento NÃO é idempotente — reenviar arriscaria cobrança dupla.
+    @CircuitBreaker(name = "pagamento", fallbackMethod = "processarPagamentoFallback")
     public String processarPagamento(String customerId, BigDecimal valor, String descricao, CartaoDTO cartao) {
         try {
             PagamentoRequest request = new PagamentoRequest(
@@ -52,6 +62,9 @@ public class PagamentoClient {
         }
     }
 
+    // Com retry: consultar status é idempotente (GET), seguro reexecutar em falha transitória.
+    @CircuitBreaker(name = "pagamento", fallbackMethod = "verificarPagamentoFallback")
+    @Retry(name = "pagamento")
     public boolean verificarPagamento(String pagamentoId) {
         try {
             StatusResponse response = restTemplate.getForObject(
@@ -60,6 +73,27 @@ public class PagamentoClient {
         } catch (Exception ex) {
             throw new BusinessException("Falha ao verificar status do pagamento");
         }
+    }
+
+    // --- Fallbacks: acionados quando o circuito abre ou a chamada falha ---
+
+    @SuppressWarnings("unused")
+    private String criarCustomerFallback(String nome, String email, String cpf, Throwable t) {
+        log.warn("Fallback criarCustomer (serviço de pagamento indisponível): {}", t.getMessage());
+        throw new BusinessException("Serviço de pagamento indisponível no momento. Tente novamente.");
+    }
+
+    @SuppressWarnings("unused")
+    private String processarPagamentoFallback(String customerId, BigDecimal valor, String descricao,
+                                              CartaoDTO cartao, Throwable t) {
+        log.warn("Fallback processarPagamento (serviço de pagamento indisponível): {}", t.getMessage());
+        throw new BusinessException("Serviço de pagamento indisponível no momento. Tente novamente.");
+    }
+
+    @SuppressWarnings("unused")
+    private boolean verificarPagamentoFallback(String pagamentoId, Throwable t) {
+        log.warn("Fallback verificarPagamento (serviço de pagamento indisponível): {}", t.getMessage());
+        throw new BusinessException("Não foi possível confirmar o status do pagamento. Tente novamente.");
     }
 
     @Data

@@ -3,6 +3,8 @@ package com.cineleo.eventos.client;
 import com.cineleo.eventos.exception.BusinessException;
 import com.cineleo.eventos.exception.ResourceNotFoundException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.Builder;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -65,14 +67,25 @@ public class UsuarioClient {
         }
     }
 
+    // Com retry: busca por id é idempotente (GET). O 404 é ignorado (não é falha de
+    // disponibilidade — ver ignore-exceptions na config), então não abre o circuito.
+    @CircuitBreaker(name = "usuarios", fallbackMethod = "buscarPorIdFallback")
+    @Retry(name = "usuarios")
     public UsuarioDTO buscarPorId(Long id) {
         try {
             return restTemplate.getForObject(usuariosUrl + "/usuarios/" + id, UsuarioDTO.class);
         } catch (HttpClientErrorException.NotFound ex) {
             throw new ResourceNotFoundException("Usuário não encontrado com id: " + id);
-        } catch (Exception ex) {
-            throw new BusinessException("Serviço de usuários indisponível");
         }
+    }
+
+    @SuppressWarnings("unused")
+    private UsuarioDTO buscarPorIdFallback(Long id, Throwable t) {
+        if (t instanceof ResourceNotFoundException rnfe) {
+            throw rnfe; // repassa o 404 sem mascarar como indisponibilidade
+        }
+        log.warn("Fallback buscarPorId (serviço de usuários indisponível): {}", t.getMessage());
+        throw new BusinessException("Serviço de usuários indisponível no momento. Tente novamente.");
     }
 
     @Data
