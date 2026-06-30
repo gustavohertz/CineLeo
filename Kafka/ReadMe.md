@@ -44,6 +44,10 @@ O **Microservices Kafka** é responsável por processar eventos assíncronos den
 
 ✅ Registrar falhas de envio
 
+✅ **Retry Automático com Exponential Backoff**
+
+✅ **Tratamento via Dead Letter Queue (DLQ)**
+
 ✅ Integrar Notification Service ao Kafka
 
 ✅ Garantir desacoplamento entre serviços
@@ -342,6 +346,16 @@ notification.email.sent
 
 ---
 
+## 🔁 Tolerância a Falhas (Retry e DLQ)
+
+O serviço implementa tolerância a falhas utilizando as anotações nativas do Spring Kafka (`@RetryableTopic`).
+
+* **Exponential Backoff:** Em caso de falha de processamento ou de rede (ex: SMTP indisponível), o consumo do evento não é perdido. O sistema tenta processar a mensagem múltiplas vezes, aumentando o tempo de espera a cada tentativa.
+    * *Exemplo (Pagamentos):* 5 tentativas, com tempo de espera crescendo exponencialmente (2s, 3s, 4.5s...).
+* **Dead Letter Queue (DLQ):** Se a mensagem exceder o limite máximo de tentativas de *Retry*, ela é redirecionada automaticamente para um tópico de mensagens mortas (`.DLT`), evitando que a fila principal trave e permitindo análise manual posterior.
+
+---
+
 ## Pagamento Recusado
 
 ```text
@@ -462,8 +476,6 @@ Principais cenários:
 
 # 🔮 Melhorias Futuras
 
-* Retry automático com Exponential Backoff
-* Dead Letter Queue (DLQ)
 * Integração Prometheus + Grafana
 * Templates HTML para e-mail
 * Rastreamento de entregas
