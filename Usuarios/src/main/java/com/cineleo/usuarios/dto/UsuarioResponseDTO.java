@@ -19,6 +19,7 @@ public class UsuarioResponseDTO {
     private boolean ativo;
     private LocalDateTime criadoEm;
     private Set<String> roles;
+    private String customerId;
 
     public static UsuarioResponseDTO from(UsuarioEntity usuario) {
         return UsuarioResponseDTO.builder()
@@ -30,6 +31,7 @@ public class UsuarioResponseDTO {
                 .ativo(usuario.isAtivo())
                 .criadoEm(usuario.getCriadoEm())
                 .roles(usuario.getRoles())
+                .customerId(usuario.getCustomerId())   // NOVO
                 .build();
     }
 }
