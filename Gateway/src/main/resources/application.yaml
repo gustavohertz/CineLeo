@@ -96,8 +96,6 @@ eureka:
 
 server:
   port: 9999
-  tomcat:
-    connection-timeout: 30s
 
 management:
   tracing:
@@ -128,32 +126,31 @@ logging:
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} %-5level [%thread] [${spring.application.name}, traceId=%X{traceId:-}, spanId=%X{spanId:-}] %logger{36} - %msg%n"
   level:
-    root: TRACE
-    org.springframework.web: DEBUG
+    root: INFO
+    org.springframework.web: INFO
     org.springframework.cloud.gateway: DEBUG
     org.springframework.web.client.RestClient: DEBUG
     org.springframework.web.servlet.function: DEBUG
     io.micrometer.tracing: DEBUG
     io.opentelemetry: INFO
-    org.springframework.http: TRACE
-    org.springframework.security: DEBUG
-    org.springframework.cloud.gateway.route: DEBUG
-    org.springframework.cloud.loadbalancer: DEBUG
-    com.cineleo.gateway: DEBUG
 
-# Resiliência (Resilience4j) – apenas para as outras rotas
+# Resiliência (Resilience4j) usada pelo filtro CircuitBreaker das rotas.
+# Os nomes (eventosCb, usuariosCb, ...) herdam o config "default".
 resilience4j:
   circuitbreaker:
     configs:
       default:
         sliding-window-type: COUNT_BASED
-        sliding-window-size: 10
-        minimum-number-of-calls: 5
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10s
+        sliding-window-size: 10                 # avalia as últimas 10 chamadas
+        minimum-number-of-calls: 5              # só decide após 5 chamadas
+        failure-rate-threshold: 50              # abre o circuito com 50% de falha
+        wait-duration-in-open-state: 10s        # fica 10s aberto antes de testar
         permitted-number-of-calls-in-half-open-state: 3
         register-health-indicator: true
+  # O CircuitBreaker do Spring Cloud envolve a chamada com um TimeLimiter
+  # (default 1s, agressivo demais). Subimos para falhar rápido sem cortar
+  # requisições normais.
   timelimiter:
     configs:
       default:
-        timeout-duration: 10s 
+        timeout-duration: 4s

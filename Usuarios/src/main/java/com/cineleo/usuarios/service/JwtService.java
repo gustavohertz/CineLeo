@@ -58,6 +58,10 @@ public class JwtService {
         return validarToken(token).getSubject();
     }
 
+    public RSAPublicKey getPublicKey() {
+        return publicKey;
+    }
+
     public boolean tokenValido(String token) {
         try {
             validarToken(token);
