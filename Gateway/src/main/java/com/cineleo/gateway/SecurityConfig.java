@@ -27,20 +27,21 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // infra e degradação não exigem token
+                        .requestMatchers("/api/notificacoes/**", "/api/pagamentos/**").permitAll() // infra e degradação
+                                                                                                   // não exigem token
                         .requestMatchers("/actuator/**", "/fallback/**").permitAll()
                         // login e cadastro precisam ser públicos (é onde se obtém o token)
                         .requestMatchers(HttpMethod.POST, "/api/usuarios/login", "/api/usuarios/create").permitAll()
                         // catálogo é consulta pública (consistente com a política do Eventos)
                         .requestMatchers(HttpMethod.GET,
-                                "/api/eventos/filmes/**", "/api/eventos/salas/**", "/api/eventos/sessoes/**").permitAll()
+                                "/api/eventos/filmes/**", "/api/eventos/salas/**", "/api/eventos/sessoes/**")
+                        .permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
         return http.build();
     }
 
-    // Decoder que busca a chave pública no JWKS do Usuarios e valida
-    // assinatura RS256, expiração e o issuer esperado.
+
     @Bean
     JwtDecoder jwtDecoder() {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
