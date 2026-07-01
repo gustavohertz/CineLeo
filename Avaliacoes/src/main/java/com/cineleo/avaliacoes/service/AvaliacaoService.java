@@ -84,5 +84,8 @@ public class AvaliacaoService {
         avaliacaoRepository.delete(avaliacao);
 
         log.info("[Avaliacao] Removida: id={}", id);
+
+        // Avisa o serviço de Recomendação para tirar a avaliação do ranking.
+        kafkaTemplate.send("cinema.avaliacao.removida", Map.of("avaliacaoId", id));
     }
 }

@@ -14,6 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AvaliacaoEventConsumerTest {
@@ -48,5 +49,20 @@ class AvaliacaoEventConsumerTest {
     void eventoSemFilme_eIgnorado() {
         consumer.onAvaliacaoCriada(new AvaliacaoCriadaEvent("a1", null, "u1", 9.0));
         verify(repository, never()).save(any());
+    }
+
+    @Test
+    void eventoRemocao_apagaAvaliacaoExistenteDoRanking() {
+        when(repository.existsById("a1")).thenReturn(true);
+
+        consumer.onAvaliacaoRemovida(new AvaliacaoCriadaEvent("a1", null, null, null));
+
+        verify(repository).deleteById("a1");
+    }
+
+    @Test
+    void eventoRemocao_semAvaliacaoIdNaoApagaNada() {
+        consumer.onAvaliacaoRemovida(new AvaliacaoCriadaEvent(null, null, null, null));
+        verify(repository, never()).deleteById(any());
     }
 }
