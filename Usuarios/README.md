@@ -1,6 +1,6 @@
 # Cineleo Usuarios Service
 
-Microserviço de gestão de usuários e autenticação, desenvolvido com **Spring Boot 3**, **Spring Cloud Eureka Client** e **PostgreSQL**. Emite tokens JWT no formato **RSA-256** e expõe um endpoint **JWKS** (`/.well-known/jwks.json`) para validação dos tokens por outros serviços do ecossistema.
+Microserviço de gestão de usuários e autenticação, desenvolvido com **Spring Boot 3**, **Spring Cloud Eureka Client** e **PostgreSQL**. Emite tokens JWT utilizando o algoritmo **HS256**, que são validados pelo API Gateway por meio de uma chave secreta compartilhada.
 
 ---
 
@@ -32,13 +32,12 @@ O serviço segue uma arquitetura em camadas clássica do Spring Boot, expondo um
 * **Controllers** – Recebem requisições HTTP e delegam para os serviços.
 
     * `UsuarioController` – CRUD de usuários e login.
-    * `JwtController` – Exposição da chave pública RSA (JWKS).
 
 * **Services** – Lógica de negócio.
 
     * `UsuarioService` – Criação e consulta de usuários.
     * `AuthService` – Autenticação (e-mail/senha) e emissão de token.
-    * `JwtService2` – Geração e validação de tokens JWT RSA-256.
+    * `JwtService` – Geração e validação de tokens JWT utilizando HS256.
 
 * **Repository** – Camada de acesso a dados com Spring Data JPA.
 
@@ -48,17 +47,16 @@ O serviço segue uma arquitetura em camadas clássica do Spring Boot, expondo um
 
 * **Exceptions** – Exceções customizadas e handler global (`GlobalExceptionHandler`).
 
-* **Infra** – Carregadores de chaves RSA a partir de arquivos `.pem`.
-
 * **Config** – Configuração do `PasswordEncoder` (BCrypt).
 
 ### Fluxo de autenticação
 
 1. Cliente envia credenciais (`POST /usuarios/login`).
-2. `AuthService` busca usuário por e-mail, verifica se está ativo e compara a senha (hash BCrypt).
-3. Se válido, `JwtService2` gera um token RSA-256 com claims (`sub`, `name`, `email`, `roles`) e expiração de 1 hora.
-4. Token é retornado no corpo da resposta.
-5. Outros serviços podem validar o token usando a chave pública obtida em `/.well-known/jwks.json`.
+2. `AuthService` busca o usuário por e-mail, verifica se está ativo e compara a senha com o hash BCrypt armazenado.
+3. Se as credenciais forem válidas, `JwtService` gera um token JWT assinado com HS256, contendo as claims `sub`, `name`, `email` e `roles`, com expiração de 1 hora.
+4. O token é retornado no corpo da resposta.
+5. Nas próximas requisições, o cliente envia o token no cabeçalho `Authorization: Bearer <token>`.
+6. O API Gateway valida a assinatura e a expiração do token usando a mesma chave secreta configurada no serviço de usuários.
 
 ### Cadastro de usuário
 
@@ -75,7 +73,6 @@ src/main/java/com/cineleo/usuarios/
 ├── config
 │   └── SecurityConfig.java           # Bean PasswordEncoder (BCrypt)
 ├── controller
-│   ├── JwtController.java            # /.well-known/jwks.json
 │   └── UsuarioController.java        # /usuarios/*
 ├── dto
 │   ├── LoginReponseDTO.java          # accessToken, tokenType, expiresIn
@@ -90,21 +87,15 @@ src/main/java/com/cineleo/usuarios/
 │   ├── CredenciaisInvalidasException.java
 │   ├── GlobalExceptionHandler.java   # Handler global de exceções
 │   └── ResourceNotFoundException.java
-├── infra
-│   ├── RsaPrivateKeyLoader.java      # Carrega chave privada PKCS#8 PEM
-│   └── RsaPublicKeyLoader.java       # Carrega chave pública X.509 PEM
 ├── repository
 │   └── UsuarioRepository.java        # Spring Data JPA repository
 └── service
     ├── AuthService.java
-    ├── JwtService2.java              # Geração e validação de tokens RSA
+    ├── JwtService.java               # Geração e validação de tokens JWT HS256
     └── UsuarioService.java
 
 src/main/resources/
-├── application.properties
-└── keys
-    ├── private_key_pkcs8.pem         # Chave privada RSA
-    └── public_key.pem                # Chave pública RSA
+└── application.properties
 ```
 
 ---
@@ -176,6 +167,10 @@ eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
 
 server.port=8083
 
+# JWT
+jwt.secret=${JWT_SECRET:cineleo-chave-secreta-local-123456789012345}
+jwt.expiration-seconds=3600
+
 # PostgreSQL
 spring.datasource.url=jdbc:postgresql://localhost:5435/usuarios_db
 spring.datasource.username=usuarios_user
@@ -194,7 +189,7 @@ spring.jackson.serialization.write-dates-as-timestamps=false
 spring.jackson.time-zone=America/Sao_Paulo
 ```
 
-**Nota:** As chaves RSA devem ser colocadas em `src/main/resources/keys/`. Gere um par de chaves (PKCS#8 e X.509) ou utilize as fornecidas pela equipe.
+**Nota:** O valor de `jwt.secret` deve ser o mesmo configurado no API Gateway. Em ambiente local, o valor após `:` funciona como chave padrão; em outros ambientes, recomenda-se definir a variável `JWT_SECRET`.
 
 ### Executando a Aplicação
 
@@ -275,34 +270,9 @@ curl -X POST http://localhost:8083/usuarios/login \
 
 ```json
 {
-  "accessToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6ImF1dGgtdG9rZW4tMSJ9...",
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
   "tokenType": "Bearer",
   "expiresIn": 3600
-}
-```
-
----
-
-### 5. Obter Chave Pública (JWKS)
-
-```bash
-curl -X GET http://localhost:8083/.well-known/jwks.json
-```
-
-**Response**
-
-```json
-{
-  "keys": [
-    {
-      "kty": "RSA",
-      "kid": "auth-token-1",
-      "use": "sig",
-      "alg": "RS256",
-      "n": "3kLq8...",
-      "e": "AQAB"
-    }
-  ]
 }
 ```
 
@@ -311,11 +281,12 @@ curl -X GET http://localhost:8083/.well-known/jwks.json
 ## Segurança
 
 * Senhas armazenadas exclusivamente como hash BCrypt.
-* Tokens JWT utilizando algoritmo **RS256**.
-* Chave privada nunca exposta.
+* Tokens JWT assinados com o algoritmo **HS256**.
+* A chave secreta não é enviada ao cliente nem exposta por endpoint.
+* O API Gateway valida a assinatura, o emissor e a expiração do token.
 * Validação de entrada utilizando Bean Validation.
 * Tratamento centralizado de exceções.
-* Recomenda-se Spring Security + OAuth2 em produção.
+* Em produção, a chave deve ser armazenada em variável de ambiente ou gerenciador de segredos.
 
 ---
 
@@ -342,19 +313,19 @@ curl -X GET http://localhost:8083/.well-known/jwks.json
 +-----------------+     200 OK {accessToken}            +-----------+-----------+
                                                                 |
                                                         +-------v--------+
-                                                        | JwtService2     |
-                                                        | (RSA Key Pair)  |
+                                                        |   JwtService    |
+                                                        |     HS256       |
                                                         +-------+--------+
                                                                 |
                                                         +-------v--------+
                                                         |   Token JWT    |
                                                         +----------------+
 
-+-----------------+       (3) GET /.well-known/jwks.json  +-------------------+
-| Outros serviços | ----------------------------------> |   JwtController   |
-| (Resource Server)|                                    | (JwtService2)     |
-|                 | <---------------------------------- |                   |
-+-----------------+     200 OK {keys:[{...}]}           +-------------------+
++-----------------+  (3) Authorization: Bearer <token>   +-------------------+
+|    Cliente      | ----------------------------------> |    API Gateway    |
+|                 |                                    | valida com HS256  |
+|                 | <---------------------------------- | ou encaminha      |
++-----------------+        Resposta da requisição        +-------------------+
 
 +-----------------+
 | Eureka Server   |

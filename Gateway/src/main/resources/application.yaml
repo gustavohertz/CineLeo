@@ -1,11 +1,6 @@
 spring:
   application:
     name: api-gateway
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          jwk-set-uri: http://localhost:8083/.well-known/jwks.json
   cloud:
     gateway:
       mvc:
@@ -26,7 +21,7 @@ spring:
               predicates:
                 - Path=/api/usuarios/**
               filters:
-                - StripPrefix=2
+                - StripPrefix=1
                 - name: CircuitBreaker
                   args:
                     id: usuariosCb
@@ -75,6 +70,9 @@ spring:
                   args:
                     id: observabilidadeCb
                     fallbackUri: forward:/fallback/observabilidade
+
+jwt:
+  secret: "${JWT_SECRET:cineleo-chave-secreta-local-123456789012345}"
 
 eureka:
   client:

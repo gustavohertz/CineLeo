@@ -6,7 +6,7 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:postgresql://localhost:5433/eventos_db",
+    "spring.datasource.url=jdbc:postgresql://localhost:5434/eventos_db",
     "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 class EventosApplicationTests {

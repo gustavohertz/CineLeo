@@ -25,10 +25,12 @@ Serviço de **API Gateway** do ecossistema **CineLeo**, baseado no **Spring Clou
 
 O **API Gateway** centraliza o acesso aos microsserviços do CineLeo em um único endpoint (`localhost:9999`). Em vez de cada cliente conhecer a porta e endereço de cada serviço, todas as requisições passam pelo Gateway, que:
 
-1. Recebe a requisição do cliente
-2. Consulta o Eureka para descobrir a instância do serviço de destino
-3. Roteia a requisição com balanceamento de carga (`lb://`)
-4. Retorna a resposta ao cliente
+1. Recebe a requisição do cliente.
+2. Verifica se a rota é pública ou protegida.
+3. Valida o token JWT HS256 nas rotas protegidas.
+4. Consulta o Eureka para descobrir a instância do serviço de destino.
+5. Roteia a requisição com balanceamento de carga (lb://).
+6. Retorna a resposta ao cliente.
 
 ### Benefícios
 
@@ -40,7 +42,9 @@ O **API Gateway** centraliza o acesso aos microsserviços do CineLeo em um únic
 
 ✅ Desacoplamento entre clientes e microsserviços
 
-✅ Facilidade para adicionar cross-cutting concerns (autenticação, rate limiting, logging)
+✅ Autenticação centralizada e validação de tokens JWT
+
+✅ Facilidade para adicionar rate limiting, logging e outros recursos compartilhados
 
 ✅ Tracing distribuído com OpenTelemetry
 
@@ -105,7 +109,9 @@ Gateway/
 │   └── main/
 │       ├── java/
 │       │   └── com/cineleo/gateway/
-│       │       └── GatewayApplication.java
+│       │       ├── FallbackController.java
+│       │       ├── GatewayApplication.java
+│       │       └── SecurityConfig.java
 │       │
 │       └── resources/
 │           ├── application.yaml
@@ -116,27 +122,33 @@ Gateway/
 
 ### Descrição dos Arquivos
 
-| Arquivo                    | Função                                                      |
-| -------------------------- | ----------------------------------------------------------- |
-| `GatewayApplication.java`  | Classe principal com `@SpringBootApplication`               |
-| `application.yaml`         | Rotas do Gateway, Eureka e configuração de observabilidade  |
-| `logback-spring.xml`       | Configuração de logs com traceId/spanId e Logstash          |
-| `pom.xml`                  | Dependências e gerenciamento do Maven                       |
+| Arquivo                    | Função                                                            |
+| -------------------------- | ----------------------------------------------------------------- |
+| `FallbackController.java`  | Retorna respostas de fallback quando um serviço está indisponível |
+| `GatewayApplication.java`  | Classe principal com `@SpringBootApplication`                     |
+| `SecurityConfig.java`      | Define as rotas públicas e protegidas e valida tokens JWT HS256   |
+| `application.yaml`         | Rotas do Gateway, Eureka e configuração de observabilidade        |
+| `logback-spring.xml`       | Configuração de logs com traceId/spanId e Logstash                |
+| `pom.xml`                  | Dependências e gerenciamento do Maven                             |
 
 ---
 
 # 🚀 Tecnologias Utilizadas
 
-| Tecnologia                       | Versão   |
-| -------------------------------- | -------- |
-| Java                             | 17       |
-| Spring Boot                      | 3.4.0    |
-| Spring Cloud Gateway MVC         | 2024.0.0 |
+| Tecnologia                         | Versão   |
+| ---------------------------------- | -------- |
+| Java                               | 17       |
+| Spring Boot                        | 3.4.0    |
+| Spring Cloud Gateway MVC           | 2024.0.0 |
 | Spring Cloud Netflix Eureka Client | 2024.0.0 |
-| Spring Boot Actuator             | 3.4.0    |
-| Micrometer Tracing (OpenTelemetry) | Latest |
-| Logstash Logback Encoder         | 8.0      |
-| Maven                            | 3.8+     |
+| Spring Boot Actuator               | 3.4.0    |
+| Micrometer Tracing (OpenTelemetry) | Latest   |
+| Logstash Logback Encoder           | 8.0      |
+| Spring Security                    | 6.x      |
+| Spring OAuth2 Resource Server      | 6.x      |
+| JWT HS256                          | -        |
+| Resilience4j                       | Latest   |
+| Maven                              | 3.8+     |
 
 ---
 
@@ -145,6 +157,7 @@ Gateway/
 * JDK 17+
 * Maven 3.8+
 * Eureka Server rodando em `localhost:8761`
+* Mesma variável `JWT_SECRET` configurada no Gateway e no Usuarios Service
 
 Verifique as versões instaladas:
 
@@ -188,6 +201,74 @@ spring:
 ### Observabilidade
 
 O Gateway inclui tracing distribuído via OpenTelemetry com exportação OTLP, e logs estruturados com traceId/spanId para correlação entre serviços.
+
+### Autenticação JWT
+
+O Gateway atua como um Resource Server e valida os tokens JWT enviados nas requisições protegidas.
+
+Os tokens são:
+
+* Gerados pelo `Usuarios Service`.
+* Assinados com o algoritmo HS256.
+* Validados pelo Gateway usando a mesma chave secreta.
+* Enviados pelo cliente no cabeçalho Authorization.
+
+Exemplo:
+
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+
+A chave é configurada no `application.yaml`:
+
+```yaml
+jwt:
+  secret: "${JWT_SECRET:cineleo-chave-secreta-local-123456789012345}"
+```
+
+O `Usuarios Service` e o Gateway devem utilizar exatamente o mesmo valor para `JWT_SECRET`.
+
+Em ambiente local, o valor após os dois-pontos funciona como chave padrão. Em um ambiente real, a chave não deve ser salva diretamente no repositório; ela deve ser fornecida por variável de ambiente ou por um gerenciador de segredos.
+
+Exemplo de variável de ambiente no PowerShell:
+```bash
+$env:JWT_SECRET="uma-chave-secreta-com-pelo-menos-32-caracteres"
+mvn spring-boot:run
+```
+
+Exemplo no CMD:
+```bash
+set JWT_SECRET=uma-chave-secreta-com-pelo-menos-32-caracteres
+mvn spring-boot:run
+```
+
+---
+
+# Rotas Públicas e Protegidas
+
+## Rotas públicas
+
+As seguintes rotas podem ser acessadas sem token:
+
+* POST /api/usuarios/login
+* POST /api/usuarios/create
+
+* GET /api/eventos/filmes/**  
+* GET /api/eventos/salas/**  
+* GET /api/eventos/sessoes/**
+
+* GET /actuator/**
+* GET /fallback/**
+
+O login e o cadastro são públicos porque o usuário ainda não possui um token nesse momento. As consultas ao catálogo também foram definidas como públicas.
+
+## Rotas protegidas
+
+Todas as demais rotas exigem um token JWT válido:
+
+```
+Authorization: Bearer <token>
+```
+
+Quando o token não é enviado, está expirado, possui uma assinatura inválida ou apresenta um emissor diferente do esperado, o Gateway bloqueia a requisição antes de encaminhá-la ao microsserviço de destino.
 
 ---
 
@@ -255,6 +336,47 @@ http://localhost:9999
 
 ---
 
+# 🔐 Fluxo de Autenticação
+
+## Login
+
+Cliente  
+   │  
+   │ POST /api/usuarios/login  
+   ▼  
+API Gateway  
+   │  
+   │ rota pública  
+   ▼  
+Usuarios Service  
+   │  
+   ├── busca usuário pelo e-mail  
+   ├── verifica se o usuário está ativo  
+   ├── compara a senha com o hash BCrypt  
+   └── gera um token JWT HS256  
+            │  
+            ▼  
+        Token JWT  
+
+## Acesso a uma rota protegida  
+Cliente  
+   │  
+   │ Authorization: Bearer <token>  
+   ▼  
+API Gateway  
+   │  
+   ├── valida a assinatura HS256  
+   ├── valida a expiração  
+   ├── valida o issuer "auth-service"  
+   └── verifica se a rota exige autenticação  
+            │  
+            ▼  
+      Microsserviço de destino  
+
+O Gateway não precisa consultar o Usuarios Service a cada requisição. A validação é feita localmente usando a mesma chave secreta utilizada para assinar o token.
+
+---
+
 # 📊 Observabilidade
 
 O Gateway está configurado com:
@@ -274,9 +396,7 @@ O Gateway está configurado com:
 
 # 🔮 Melhorias Futuras
 
-* Autenticação centralizada (JWT validation no Gateway)
 * Rate Limiting por rota
-* Circuit Breaker com Resilience4j
 * CORS configurável
 * Retry automático em falhas transientes
 * Swagger/OpenAPI aggregation
@@ -292,4 +412,4 @@ Este projeto faz parte do ecossistema **CineLeo** e destina-se ao uso acadêmico
 
 ## 👨‍💻 Desenvolvido para o Ecossistema CineLeo
 
-API Gateway • Spring Cloud Gateway • Eureka Discovery • OpenTelemetry • Java 17 • Spring Boot 3
+API Gateway • Spring Cloud Gateway • Spring Security • JWT HS256 • Resilience4j • Eureka Discovery • OpenTelemetry • Java 17 • Spring Boot 3
