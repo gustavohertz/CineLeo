@@ -19,6 +19,7 @@ public class MenuInterativoRunner implements CommandLineRunner {
     private final IngressosCliFlow ingressosCliFlow;
     private final ContaCliFlow contaCliFlow;
     private final AutenticacaoCliFlow autenticacaoCliFlow;
+    private final AvaliacaoCliFlow avaliacaoCliFlow;
 
     @Override
     public void run(String... args) throws Exception {
@@ -33,6 +34,7 @@ public class MenuInterativoRunner implements CommandLineRunner {
             System.out.println("3 - Minha Conta");
             System.out.println("4 - Fazer Login / Trocar de Conta");
             System.out.println("5 - Fazer Cadastro");
+            System.out.println("6 - Avaliar um Filme");
             System.out.println("0 - Sair");
             System.out.print("Opção: ");
 
@@ -54,6 +56,9 @@ public class MenuInterativoRunner implements CommandLineRunner {
                         break;
                     case "5":
                         autenticacaoCliFlow.realizarCadastro(scanner);
+                        break;
+                    case "6":
+                        avaliacaoCliFlow.executar(scanner);
                         break;
                     case "0":
                         System.out.println("Saindo do terminal do CineLeo...");
