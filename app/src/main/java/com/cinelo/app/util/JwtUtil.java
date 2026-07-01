@@ -1,4 +1,4 @@
-package com.cineleo.eventos.util;
+package com.cinelo.app.util;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;

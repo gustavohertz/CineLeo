@@ -1,13 +1,11 @@
-package com.cineleo.eventos.cli;
+package com.cinelo.app.cli;
 
-import com.cineleo.eventos.dto.FilmeResponseDTO;
-import com.cineleo.eventos.dto.PagamentoReservaRequestDTO;
-import com.cineleo.eventos.dto.ReservaRequestDTO;
-import com.cineleo.eventos.dto.ReservaResponseDTO;
-import com.cineleo.eventos.dto.SessaoResponseDTO;
-import com.cineleo.eventos.service.FilmeService;
-import com.cineleo.eventos.service.ReservaService;
-import com.cineleo.eventos.service.SessaoService;
+import com.cinelo.app.client.EventosClient;
+import com.cinelo.app.dto.FilmeResponseDTO;
+import com.cinelo.app.dto.PagamentoReservaRequestDTO;
+import com.cinelo.app.dto.ReservaRequestDTO;
+import com.cinelo.app.dto.ReservaResponseDTO;
+import com.cinelo.app.dto.SessaoResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -18,17 +16,15 @@ import java.util.Scanner;
 @RequiredArgsConstructor
 public class CatalogoCliFlow {
 
-    private final FilmeService filmeService;
-    private final SessaoService sessaoService;
-    private final ReservaService reservaService;
+    private final EventosClient eventosClient;
     private final AutenticacaoCliFlow autenticacaoCliFlow;
     private final CliState cliState;
 
     public void executar(Scanner scanner) {
         System.out.println("\n--- Catálogo de Filmes ---");
-        List<FilmeResponseDTO> filmes = filmeService.listarAtivos();
+        List<FilmeResponseDTO> filmes = eventosClient.listarFilmesAtivos();
 
-        if (filmes.isEmpty()) {
+        if (filmes == null || filmes.isEmpty()) {
             System.out.println("Nenhum filme em cartaz no momento.");
             return;
         }
@@ -42,9 +38,9 @@ public class CatalogoCliFlow {
         if (filmeId == 0) return;
 
         System.out.println("\n--- Horários Disponíveis ---");
-        List<SessaoResponseDTO> sessoes = sessaoService.listarPorFilme(filmeId);
+        List<SessaoResponseDTO> sessoes = eventosClient.listarSessoesPorFilme(filmeId);
 
-        if (sessoes.isEmpty()) {
+        if (sessoes == null || sessoes.isEmpty()) {
             System.out.println("Nenhuma sessão disponível para este filme.");
             return;
         }
@@ -77,43 +73,47 @@ public class CatalogoCliFlow {
 
         System.out.println("Criando reserva...");
         ReservaRequestDTO reservaDto = new ReservaRequestDTO();
-        reservaDto.setUsuarioId(cliState.getUsuarioLogadoId());
         reservaDto.setSessaoId(sessaoId);
+        reservaDto.setUsuarioId(cliState.getUsuarioLogadoId());
         reservaDto.setQuantidadeIngressos(assentos);
 
-        ReservaResponseDTO reservaCriada = reservaService.criar(reservaDto);
-        System.out.println("Reserva criada! Código: " + reservaCriada.getCodigoConfirmacao() + " | Total: R$" + reservaCriada.getValorTotal());
-
-        System.out.println("\n--- Tela de Pagamento ---");
-        System.out.println("Escolha o tipo:");
-        System.out.println("1 - Inteira");
-        System.out.println("2 - Meia");
-        System.out.print("Opção: ");
-        scanner.nextLine();
-
-        System.out.println("\nConfirmar pagamento simulado? (S/N)");
-        if (!scanner.nextLine().trim().equalsIgnoreCase("S")) {
-            System.out.println("Pagamento cancelado. A reserva ficará pendente.");
-            return;
-        }
-
-        System.out.println("Processando pagamento...");
-        PagamentoReservaRequestDTO pagDto = new PagamentoReservaRequestDTO();
-        PagamentoReservaRequestDTO.CartaoDTO cartao = new PagamentoReservaRequestDTO.CartaoDTO();
-        cartao.setNumero("1234567812345678");
-        cartao.setNomeTitular(cliState.getUsuarioLogado().getNome());
-        cartao.setMesExpiracao("12");
-        cartao.setAnoExpiracao("2030");
-        cartao.setCvv("123");
-        pagDto.setCartao(cartao);
-
         try {
-            reservaService.pagar(reservaCriada.getId(), pagDto);
-            System.out.println("\nSUCESSO: Pagamento Aprovado!");
+            ReservaResponseDTO reservaCriada = eventosClient.criarReserva(cliState.getToken(), reservaDto);
+            System.out.println("Reserva criada! Código: " + reservaCriada.getCodigoConfirmacao() + " | Total: R$" + reservaCriada.getValorTotal());
+
+            System.out.println("\n--- Tela de Pagamento ---");
+            System.out.println("Escolha o tipo:");
+            System.out.println("1 - Inteira");
+            System.out.println("2 - Meia");
+            System.out.print("Opção: ");
+            scanner.nextLine();
+
+            System.out.println("\nConfirmar pagamento simulado? (S/N)");
+            if (!scanner.nextLine().trim().equalsIgnoreCase("S")) {
+                System.out.println("Pagamento cancelado. A reserva ficará pendente.");
+                return;
+            }
+
+            System.out.println("Processando pagamento...");
+            PagamentoReservaRequestDTO pagDto = new PagamentoReservaRequestDTO();
+            PagamentoReservaRequestDTO.CartaoDTO cartao = new PagamentoReservaRequestDTO.CartaoDTO();
+            cartao.setNumero("1234567812345678");
+            cartao.setNomeTitular(cliState.getUsuarioLogado().getNome());
+            cartao.setMesExpiracao("12");
+            cartao.setAnoExpiracao("2030");
+            cartao.setCvv("123");
+            pagDto.setCartao(cartao);
+
+            ReservaResponseDTO reservaPaga = eventosClient.pagarReserva(cliState.getToken(), reservaCriada.getId(), pagDto);
+            if ("CONFIRMADA".equals(reservaPaga.getStatus())) {
+                System.out.println("\nSUCESSO: Pagamento Aprovado!");
+            } else {
+                System.out.println("\nFALHA no Pagamento: status=" + reservaPaga.getStatus());
+            }
             System.out.println("Notificação: E-mail enviado ao cliente " + cliState.getUsuarioLogado().getEmail());
+
         } catch (Exception e) {
             System.out.println("\nFALHA no Pagamento: " + e.getMessage());
-            System.out.println("Notificação: E-mail de falha enviado para " + cliState.getUsuarioLogado().getEmail());
         }
         System.out.println("\nPressione ENTER para retornar ao Menu Principal...");
         scanner.nextLine();

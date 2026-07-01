@@ -1,6 +1,6 @@
-package com.cineleo.eventos.cli;
+package com.cinelo.app.cli;
 
-import com.cineleo.eventos.client.UsuarioClient;
+import com.cinelo.app.dto.UsuarioDTO;
 import lombok.Data;
 import org.springframework.stereotype.Component;
 
@@ -10,15 +10,15 @@ import java.time.Instant;
 @Data
 public class CliState {
     private Long usuarioLogadoId;
-    private UsuarioClient.UsuarioDTO usuarioLogado;
+    private UsuarioDTO usuarioLogado;
     private String token;
     private Instant tokenExpiration;
 
     public boolean isLogado() {
         return token != null &&
-               tokenExpiration != null &&
-               tokenExpiration.isAfter(Instant.now()) &&
-               usuarioLogado != null;
+                tokenExpiration != null &&
+                tokenExpiration.isAfter(Instant.now()) &&
+                usuarioLogado != null;
     }
 
     public void setToken(String token, long expiresInSeconds) {
