@@ -103,9 +103,6 @@ spring.data.mongodb.uri=mongodb://avaliacoes_user:sua_senha@localhost:27017/aval
 
 # Eureka
 eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
-
-# Segurança (JWKS)
-spring.security.oauth2.resourceserver.jwt.jwk-set-uri=http://localhost:8083/.well-known/jwks.json
 ```
 
 ### Executando a Aplicação
@@ -172,7 +169,7 @@ curl -X DELETE http://localhost:8086/avaliacoes/ID_DA_AVALIACAO \
 ## Segurança
 
 * O microsserviço atua como um **Resource Server** OAuth2.
-* A validação do token é feita consultando as chaves públicas (JWKS) expostas pelo **Usuarios Service** (`/usuarios/.well-known/jwks.json`).
+* A validação do token é feita consultando as chaves públicas (JWKS) expostas pelo **Usuarios Service**.
 * Apenas o endpoint `GET /avaliacoes/filme/**` é público; todos os outros exigem autenticação válida.
 * O sistema previne que um usuário crie mais de uma avaliação para o mesmo filme e garante que apenas o autor possa editar ou excluir sua própria avaliação.
 

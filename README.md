@@ -78,7 +78,7 @@ Cada domínio de negócio é isolado em um microsserviço independente, proporci
        │          │           │                       │
        │          ▼           │                       ▼
        │    ┌──────────┐      │                ┌──────────────┐
-       │    │ JWT/RSA  │      │                │ SMTP Server  │
+       │    │JWT HS256 │      │                │ SMTP Server  │
        │    └──────────┘      │                └──────────────┘
        │                      │
        └──────────────────────┘
@@ -172,7 +172,21 @@ http://localhost:8761
 
 ---
 
-## 3. Iniciar Microsserviços
+## 3. Configurar a Chave de Autenticação
+
+O **Usuarios Service** gera os tokens JWT e o **API Gateway** valida esses tokens utilizando a mesma chave secreta.
+
+Defina a variável de ambiente `JWT_SECRET` antes de iniciar os dois serviços:
+
+```bash
+JWT_SECRET=cineleo-chave-secreta-local-123456789012345
+```
+
+Para execução local, os arquivos de configuração possuem um valor padrão. Em outros ambientes, utilize uma chave própria e mantenha o mesmo valor no Gateway e no serviço de usuários.
+
+---
+
+## 4. Iniciar Microsserviços
 
 ```bash
 cd Gateway && mvn spring-boot:run
@@ -230,7 +244,7 @@ Usuarios Service
    │
    ▼
 
-JWT RSA-256
+Token JWT HS256
 ```
 
 ---
@@ -380,7 +394,6 @@ notification.email.sent
 | POST   | `/usuarios/login`        |
 | GET    | `/usuarios/{id}`         |
 | GET    | `/usuarios/all`          |
-| GET    | `/.well-known/jwks.json` |
 | GET    | `/health-check`          |
 
 ---
@@ -455,13 +468,14 @@ GET /observabilidade/dashboard
 
 ### Autenticação
 
-* JWT RS256
-* JWKS Endpoint
-* Tokens assinados com RSA
+* Tokens JWT assinados com o algoritmo **HS256**.
+* A mesma chave secreta é utilizada pelo **Usuarios Service** para gerar os tokens e pelo **API Gateway** para validá-los.
+* Login e cadastro são públicos; as demais rotas protegidas exigem o envio do token no cabeçalho `Authorization: Bearer <token>`.
+* A chave é configurada pela variável de ambiente `JWT_SECRET` e não é exposta por endpoint.
 
 ### Proteção de Dados
 
-* Senhas criptografadas com BCrypt
+* Senhas armazenadas como hash BCrypt
 * Bean Validation
 * DTOs para entrada e saída
 

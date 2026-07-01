@@ -8,19 +8,24 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+
 @Configuration
 public class SecurityConfig {
 
         private static final String ISSUER = "auth-service";
 
-        @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
-        private String jwkSetUri;
+    @Value("${jwt.secret}")
+    private String jwtSecret;
 
         @Bean
         SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -48,11 +53,23 @@ public class SecurityConfig {
                 return http.build();
         }
 
-        @Bean
-        JwtDecoder jwtDecoder() {
-                NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-                OAuth2TokenValidator<Jwt> comIssuer = JwtValidators.createDefaultWithIssuer(ISSUER);
-                decoder.setJwtValidator(comIssuer);
-                return decoder;
-        }
+    @Bean
+    JwtDecoder jwtDecoder() {
+        SecretKey secretKey = new SecretKeySpec(
+                jwtSecret.getBytes(StandardCharsets.UTF_8),
+                "HmacSHA256"
+        );
+
+        NimbusJwtDecoder decoder = NimbusJwtDecoder
+                .withSecretKey(secretKey)
+                .macAlgorithm(MacAlgorithm.HS256)
+                .build();
+
+        OAuth2TokenValidator<Jwt> validator =
+                JwtValidators.createDefaultWithIssuer(ISSUER);
+
+        decoder.setJwtValidator(validator);
+
+        return decoder;
+    }
 }
