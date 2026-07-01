@@ -29,4 +29,20 @@ public class AvaliacaoEventConsumer {
                 evento.avaliacaoId(), evento.filmeId(), evento.usuarioId(), evento.nota()));
         log.info("Avaliação registrada para ranking: filme={}, nota={}", evento.filmeId(), evento.nota());
     }
+
+    // O evento de remoção carrega ao menos o avaliacaoId (mesmo DTO tolerante do
+    // evento de criação). Tiramos a avaliação do ranking para ele não ficar
+    // desatualizado quando o usuário apaga a nota.
+    @KafkaListener(topics = "${cineleo.topics.avaliacao-removida}", groupId = "recomendacao-group")
+    public void onAvaliacaoRemovida(AvaliacaoCriadaEvent evento) {
+        String id = evento.avaliacaoId();
+        if (id == null) {
+            log.warn("Evento de remoção ignorado (avaliacaoId ausente)");
+            return;
+        }
+        if (repository.existsById(id)) {
+            repository.deleteById(id);
+            log.info("Avaliação removida do ranking: id={}", id);
+        }
+    }
 }
