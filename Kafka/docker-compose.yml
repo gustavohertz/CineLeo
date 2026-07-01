@@ -17,6 +17,13 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      # Single-node: os tópicos internos precisam de fator de replicação 1,
+      # senão o __consumer_offsets falha (INVALID_REPLICATION_FACTOR) e
+      # NENHUM consumer de grupo funciona.
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
 
     volumes:
       - kafka_data:/tmp/kraft-combined-logs
