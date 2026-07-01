@@ -9,10 +9,12 @@ import com.cineleo.avaliacoes.exception.ResourceNotFoundException;
 import com.cineleo.avaliacoes.repository.AvaliacaoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -20,6 +22,7 @@ import java.util.List;
 public class AvaliacaoService {
 
     private final AvaliacaoRepository avaliacaoRepository;
+    private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public AvaliacaoResponseDTO criar(AvaliacaoRequestDTO dto, String usuarioId, String usuarioNome) {
 
@@ -38,6 +41,13 @@ public class AvaliacaoService {
         Avaliacao salva = avaliacaoRepository.save(avaliacao);
 
         log.info("[Avaliacao] Criada: id={}, filmeId={}, usuarioId={}", salva.getId(), salva.getFilmeId(), usuarioId);
+
+        // Publica o evento que alimenta o serviço de Recomendação (ranking de filmes).
+        kafkaTemplate.send("cinema.avaliacao.criada", Map.of(
+                "avaliacaoId", salva.getId(),
+                "filmeId", salva.getFilmeId(),
+                "usuarioId", salva.getUsuarioId(),
+                "nota", salva.getNota()));
 
         return AvaliacaoResponseDTO.from(salva);
     }
@@ -74,5 +84,8 @@ public class AvaliacaoService {
         avaliacaoRepository.delete(avaliacao);
 
         log.info("[Avaliacao] Removida: id={}", id);
+
+        // Avisa o serviço de Recomendação para tirar a avaliação do ranking.
+        kafkaTemplate.send("cinema.avaliacao.removida", Map.of("avaliacaoId", id));
     }
 }

@@ -17,37 +17,42 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 public class SecurityConfig {
 
-    private static final String ISSUER = "auth-service";
+        private static final String ISSUER = "auth-service";
 
-    @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
-    private String jwkSetUri;
+        @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+        private String jwkSetUri;
 
-    @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        // Libera todas as rotas de notificações, pagamentos e usuários (GET)
-                        .requestMatchers("/api/notificacoes/**", "/api/pagamentos/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/usuarios/**").permitAll()
-                        // Libera actuator e fallback
-                        .requestMatchers("/actuator/**", "/fallback/**").permitAll()
-                        // login e cadastro públicos
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios/login", "/api/usuarios/create").permitAll()
-                        // catálogo público
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/eventos/filmes/**", "/api/eventos/salas/**", "/api/eventos/sessoes/**")
-                        .permitAll()
-                        .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-        return http.build();
-    }
+        @Bean
+        SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .authorizeHttpRequests(auth -> auth
+                                                // Libera todas as rotas de notificações, pagamentos e usuários (GET)
+                                                .requestMatchers("/api/notificacoes/**", "/api/pagamentos/**")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/usuarios/**").permitAll()
+                                                // Libera actuator e fallback
+                                                .requestMatchers("/actuator/**", "/fallback/**").permitAll()
+                                                // login e cadastro públicos
+                                                .requestMatchers(HttpMethod.POST, "/api/usuarios/login",
+                                                                "/api/usuarios/create")
+                                                .permitAll()
+                                                // catálogo e recomendações são consultas públicas
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/eventos/filmes/**", "/api/eventos/salas/**",
+                                                                "/api/eventos/sessoes/**",
+                                                                "/api/recomendacoes/**")
+                                                .permitAll()
+                                                .anyRequest().authenticated())
+                                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                return http.build();
+        }
 
-    @Bean
-    JwtDecoder jwtDecoder() {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
-        OAuth2TokenValidator<Jwt> comIssuer = JwtValidators.createDefaultWithIssuer(ISSUER);
-        decoder.setJwtValidator(comIssuer);
-        return decoder;
-    }
+        @Bean
+        JwtDecoder jwtDecoder() {
+                NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+                OAuth2TokenValidator<Jwt> comIssuer = JwtValidators.createDefaultWithIssuer(ISSUER);
+                decoder.setJwtValidator(comIssuer);
+                return decoder;
+        }
 }
