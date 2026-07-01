@@ -1,7 +1,7 @@
-package com.cineleo.eventos.cli;
+package com.cinelo.app.cli;
 
-import com.cineleo.eventos.dto.ReservaResponseDTO;
-import com.cineleo.eventos.service.ReservaService;
+import com.cinelo.app.client.EventosClient;
+import com.cinelo.app.dto.ReservaResponseDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -12,7 +12,7 @@ import java.util.Scanner;
 @RequiredArgsConstructor
 public class IngressosCliFlow {
 
-    private final ReservaService reservaService;
+    private final EventosClient eventosClient;
     private final AutenticacaoCliFlow autenticacaoCliFlow;
     private final CliState cliState;
 
@@ -23,8 +23,8 @@ public class IngressosCliFlow {
             return;
         }
 
-        List<ReservaResponseDTO> minhasReservas = reservaService.listarPorEmail(cliState.getUsuarioLogado().getEmail());
-        if (minhasReservas.isEmpty()) {
+        List<ReservaResponseDTO> minhasReservas = eventosClient.listarReservasPorEmail(cliState.getToken(), cliState.getUsuarioLogado().getEmail());
+        if (minhasReservas == null || minhasReservas.isEmpty()) {
             System.out.println("Você ainda não possui ingressos.");
         } else {
             for (ReservaResponseDTO r : minhasReservas) {

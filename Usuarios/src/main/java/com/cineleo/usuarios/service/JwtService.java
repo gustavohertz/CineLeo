@@ -18,7 +18,7 @@ import java.util.Date;
 @Service
 public class JwtService {
     private static final String ISSUER = "auth-service";
-    private static final long ACCESS_TOKEN_EXPIRATION_SECONDS = 3600; 
+    private static final long ACCESS_TOKEN_EXPIRATION_SECONDS = 3600;
 
     private static final String PRIVATE_KEY_PATH = "keys/private_key_pkcs8.pem";
     private static final String PUBLIC_KEY_PATH = "keys/public_key.pem";
@@ -56,10 +56,6 @@ public class JwtService {
 
     public String extrairUsuario(String token) {
         return validarToken(token).getSubject();
-    }
-
-    public RSAPublicKey getPublicKey() {
-        return publicKey;
     }
 
     public boolean tokenValido(String token) {

@@ -2,10 +2,12 @@ package com.cineleo.service;
 
 import com.cineleo.dto.ConsumeResponseDTO;
 import com.cineleo.dto.NotificationRequestDTO;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.OffsetDateTime;
@@ -16,26 +18,27 @@ public class NotificationClientService {
 
     private static final Logger log = LoggerFactory.getLogger(NotificationClientService.class);
 
-    private final RestTemplate restTemplate;
-    private final String notificationApiUrl;
+    private final RestTemplate loadBalancedRestTemplate;
 
-    public NotificationClientService(RestTemplate restTemplate,
-            @Value("${notification.api.url}") String notificationApiUrl) {
-        this.restTemplate = restTemplate;
-        this.notificationApiUrl = notificationApiUrl;
+    private static final String GATEWAY_SERVICE_NAME = "API-GATEWAY";
+    private static final String NOTIFICATION_PATH = "/api/notificacoes";
+
+    public NotificationClientService(RestTemplate loadBalancedRestTemplate) {
+        this.loadBalancedRestTemplate = loadBalancedRestTemplate;
     }
 
+    @Retry(name = "notification")
+    @CircuitBreaker(name = "notification", fallbackMethod = "fallbackCreateAndSend")
     public void createAndSendEmail(String userID, String userEmail, String message, OffsetDateTime dateTime) {
         try {
-            
             NotificationRequestDTO request = new NotificationRequestDTO(
                     userID,
                     userEmail,
                     message,
                     dateTime != null ? dateTime.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME) : null);
 
-            ConsumeResponseDTO response = restTemplate.postForObject(
-                    notificationApiUrl + "/notification/consume",
+            ConsumeResponseDTO response = loadBalancedRestTemplate.postForObject(
+                    "lb://" + GATEWAY_SERVICE_NAME + NOTIFICATION_PATH + "/notification/consume",
                     request,
                     ConsumeResponseDTO.class);
 
@@ -47,14 +50,22 @@ public class NotificationClientService {
             String notificationId = response.id();
             log.info("Notificação criada com sucesso: id={}", notificationId);
 
-            restTemplate.postForObject(
-                    notificationApiUrl + "/notification/send-email/" + notificationId,
+            loadBalancedRestTemplate.postForObject(
+                    "lb://" + GATEWAY_SERVICE_NAME + NOTIFICATION_PATH + "/notification/send-email/" + notificationId,
                     null,
                     String.class);
             log.info("E‑mail simulado enviado para a notificação id={}", notificationId);
 
+        } catch (RestClientException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("Falha ao criar/enviar notificação: {}", e.getMessage(), e);
+            throw new RuntimeException("Falha inesperada ao enviar notificação", e);
         }
+    }
+
+    @SuppressWarnings("unused")
+    private void fallbackCreateAndSend(String userID, String userEmail, String message, OffsetDateTime dateTime, Throwable t) {
+        log.error("Falha ao notificar (fallback via Gateway): userID={}, email={}, mensagem={}, erro: {}",
+                userID, userEmail, message, t.getMessage(), t);
     }
 }

@@ -1,4 +1,4 @@
-package com.cineleo.eventos.cli;
+package com.cinelo.app.cli;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
