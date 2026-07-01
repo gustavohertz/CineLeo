@@ -1,11 +1,11 @@
-package com.cineleo.eventos.cli;
+package com.cinelo.app.cli;
 
-import com.cineleo.eventos.client.UsuarioClient;
-import com.cineleo.eventos.client.UsuarioClient.LoginResponse;
-import com.cineleo.eventos.client.UsuarioClient.UsuarioDTO;
-import com.cineleo.eventos.client.UsuarioClient.UsuarioRequest;
-import com.cineleo.eventos.exception.BusinessException;
-import com.cineleo.eventos.util.JwtUtil;
+import com.cinelo.app.client.UsuarioClient;
+import com.cinelo.app.dto.LoginResponseDTO;
+import com.cinelo.app.dto.UsuarioDTO;
+import com.cinelo.app.dto.UsuarioRequestDTO;
+import com.cinelo.app.exception.BusinessException;
+import com.cinelo.app.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -42,12 +42,11 @@ public class AutenticacaoCliFlow {
             String senha = scanner.nextLine();
 
             try {
-                LoginResponse loginResponse = usuarioClient.login(email, senha);
-                String token = loginResponse.getAccessToken();
-                long expiresIn = loginResponse.getExpiresIn();
+                LoginResponseDTO loginResponse = usuarioClient.login(email, senha);
+                String token = loginResponse.accessToken();
+                long expiresIn = loginResponse.expiresIn();
 
                 Long userId = Long.parseLong(JwtUtil.getSubject(token));
-
                 UsuarioDTO usuario = usuarioClient.buscarPorId(userId);
 
                 cliState.setToken(token, expiresIn);
@@ -88,7 +87,7 @@ public class AutenticacaoCliFlow {
             System.out.print("Senha (mínimo 8 caracteres): ");
             String senha = scanner.nextLine();
 
-            UsuarioRequest request = new UsuarioRequest();
+            UsuarioRequestDTO request = new UsuarioRequestDTO();
             request.setNome(nome);
             request.setIdade(idade);
             request.setEmail(email);
@@ -100,8 +99,8 @@ public class AutenticacaoCliFlow {
                 UsuarioDTO usuarioCriado = usuarioClient.criarUsuario(request);
                 System.out.println("Usuário criado com sucesso! ID: " + usuarioCriado.getId());
 
-                LoginResponse loginResponse = usuarioClient.login(email, senha);
-                cliState.setToken(loginResponse.getAccessToken(), loginResponse.getExpiresIn());
+                LoginResponseDTO loginResponse = usuarioClient.login(email, senha);
+                cliState.setToken(loginResponse.accessToken(), loginResponse.expiresIn());
                 cliState.setUsuarioLogado(usuarioCriado);
                 cliState.setUsuarioLogadoId(usuarioCriado.getId());
 

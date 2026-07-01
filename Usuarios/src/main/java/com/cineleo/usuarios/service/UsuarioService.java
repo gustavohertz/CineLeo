@@ -1,8 +1,10 @@
 package com.cineleo.usuarios.service;
 
+import com.cineleo.usuarios.client.PagamentoClient;
 import com.cineleo.usuarios.dto.UsuarioRequestDTO;
 import com.cineleo.usuarios.dto.UsuarioResponseDTO;
 import com.cineleo.usuarios.entity.UsuarioEntity;
+import com.cineleo.usuarios.exception.BusinessException;
 import com.cineleo.usuarios.exception.ConflictException;
 import com.cineleo.usuarios.exception.ResourceNotFoundException;
 import com.cineleo.usuarios.repository.UsuarioRepository;
@@ -20,6 +22,7 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PagamentoClient pagamentoClient;
 
     @Transactional(readOnly = true)
     public List<UsuarioResponseDTO> listarTodos() {
@@ -44,6 +47,13 @@ public class UsuarioService {
             throw new ConflictException("Já existe um usuário cadastrado com o CPF: " + dto.getCpf());
         }
 
+        String customerId;
+        try {
+            customerId = pagamentoClient.criarCustomer(dto.getNome(), dto.getEmail(), dto.getCpf());
+        } catch (Exception e) {
+            throw new BusinessException("Falha ao registrar cliente no gateway de pagamento: " + e.getMessage());
+        }
+
         UsuarioEntity usuario = UsuarioEntity.builder()
                 .nome(dto.getNome())
                 .idade(dto.getIdade())
@@ -52,6 +62,7 @@ public class UsuarioService {
                 .senhaHash(passwordEncoder.encode(dto.getSenha()))
                 .ativo(true)
                 .roles(Set.of("USER"))
+                .customerId(customerId)   // NOVO
                 .build();
 
         return UsuarioResponseDTO.from(usuarioRepository.save(usuario));

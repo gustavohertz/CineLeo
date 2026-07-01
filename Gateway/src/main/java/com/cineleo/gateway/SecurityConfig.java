@@ -22,27 +22,36 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 public class SecurityConfig {
 
-    private static final String ISSUER = "auth-service";
+        private static final String ISSUER = "auth-service";
 
     @Value("${jwt.secret}")
     private String jwtSecret;
 
-    @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        // infra e degradação não exigem token
-                        .requestMatchers("/actuator/**", "/fallback/**").permitAll()
-                        // login e cadastro precisam ser públicos (é onde se obtém o token)
-                        .requestMatchers(HttpMethod.POST, "/api/usuarios/login", "/api/usuarios/create").permitAll()
-                        // catálogo é consulta pública (consistente com a política do Eventos)
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/eventos/filmes/**", "/api/eventos/salas/**", "/api/eventos/sessoes/**").permitAll()
-                        .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-        return http.build();
-    }
+        @Bean
+        SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+                http
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .authorizeHttpRequests(auth -> auth
+                                                // Libera todas as rotas de notificações, pagamentos e usuários (GET)
+                                                .requestMatchers("/api/notificacoes/**", "/api/pagamentos/**")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/usuarios/**").permitAll()
+                                                // Libera actuator e fallback
+                                                .requestMatchers("/actuator/**", "/fallback/**").permitAll()
+                                                // login e cadastro públicos
+                                                .requestMatchers(HttpMethod.POST, "/api/usuarios/login",
+                                                                "/api/usuarios/create")
+                                                .permitAll()
+                                                // catálogo e recomendações são consultas públicas
+                                                .requestMatchers(HttpMethod.GET,
+                                                                "/api/eventos/filmes/**", "/api/eventos/salas/**",
+                                                                "/api/eventos/sessoes/**",
+                                                                "/api/recomendacoes/**")
+                                                .permitAll()
+                                                .anyRequest().authenticated())
+                                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+                return http.build();
+        }
 
     @Bean
     JwtDecoder jwtDecoder() {

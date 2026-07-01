@@ -3,6 +3,7 @@ package com.cineleo.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
@@ -11,10 +12,14 @@ import org.springframework.web.client.RestTemplate;
 @EnableConfigurationProperties(RestConfig.AsaasProperties.class)
 public class RestConfig {
 
-    // Construído a partir do RestTemplateBuilder autoconfigurado para que o
-    // Micrometer instrumente as chamadas HTTP e propague o header traceparent (W3C).
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder builder) {
+        return builder.build();
+    }
+
+    @Bean
+    @LoadBalanced
+    public RestTemplate loadBalancedRestTemplate(RestTemplateBuilder builder) {
         return builder.build();
     }
 

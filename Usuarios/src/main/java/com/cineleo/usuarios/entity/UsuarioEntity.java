@@ -44,6 +44,9 @@ public class UsuarioEntity {
     @Builder.Default
     private boolean ativo = true;
 
+    @Column(name = "customer_id", length = 50)
+    private String customerId;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "usuario_roles",

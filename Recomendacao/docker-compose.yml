@@ -1,0 +1,22 @@
+services:
+  recomendacao-db:
+    image: postgres:16-alpine
+    container_name: cineleo-recomendacao-db
+    environment:
+      POSTGRES_DB: recomendacao_db
+      POSTGRES_USER: recomendacao_user
+      POSTGRES_PASSWORD: recomendacao_pass
+    ports:
+      - "5436:5432"
+    volumes:
+      - recomendacao_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recomendacao_user -d recomendacao_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  recomendacao_data:
+    driver: local
