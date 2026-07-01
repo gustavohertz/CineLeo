@@ -4,11 +4,11 @@ import com.cineleo.usuarios.client.PagamentoClient;
 import com.cineleo.usuarios.dto.UsuarioRequestDTO;
 import com.cineleo.usuarios.dto.UsuarioResponseDTO;
 import com.cineleo.usuarios.entity.UsuarioEntity;
-import com.cineleo.usuarios.exception.BusinessException;
 import com.cineleo.usuarios.exception.ConflictException;
 import com.cineleo.usuarios.exception.ResourceNotFoundException;
 import com.cineleo.usuarios.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class UsuarioService {
 
@@ -47,11 +48,14 @@ public class UsuarioService {
             throw new ConflictException("Já existe um usuário cadastrado com o CPF: " + dto.getCpf());
         }
 
-        String customerId;
+        // Best-effort: o cadastro NÃO depende do gateway de pagamento. Se o
+        // Pagamento estiver indisponível, o usuário é criado sem customerId
+        // (que pode ser preenchido depois, no primeiro pagamento).
+        String customerId = null;
         try {
             customerId = pagamentoClient.criarCustomer(dto.getNome(), dto.getEmail(), dto.getCpf());
         } catch (Exception e) {
-            throw new BusinessException("Falha ao registrar cliente no gateway de pagamento: " + e.getMessage());
+            log.warn("Cadastro seguindo sem customer de pagamento (serviço indisponível): {}", e.getMessage());
         }
 
         UsuarioEntity usuario = UsuarioEntity.builder()

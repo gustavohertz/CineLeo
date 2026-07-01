@@ -19,13 +19,24 @@ spring:
             - id: recomendacao-service
               uri: lb://RECOMENDACAO-SERVICE
               predicates:
-                - Path=/api/recomendacoes/**
+                - Path=/api/recomendacoes,/api/recomendacoes/**
               filters:
-                - StripPrefix=2
+                - StripPrefix=1
                 - name: CircuitBreaker
                   args:
                     id: recomendacaoCb
                     fallbackUri: forward:/fallback/recomendacoes
+
+            - id: avaliacoes-service
+              uri: lb://AVALIACOES-SERVICE
+              predicates:
+                - Path=/api/avaliacoes,/api/avaliacoes/**
+              filters:
+                - StripPrefix=1
+                - name: CircuitBreaker
+                  args:
+                    id: avaliacoesCb
+                    fallbackUri: forward:/fallback/avaliacoes
 
             - id: usuarios-service
               uri: lb://USUARIOS-SERVICE
